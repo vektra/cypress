@@ -1,0 +1,31 @@
+package cypress;
+
+message TAI64n {
+  required uint64 seconds = 1;
+  required uint32 nanoseconds = 2;
+}
+
+message Interval {
+  required uint64 seconds = 1;
+  required uint32 nanoseconds = 2;
+}
+
+message Attribute {
+  required uint32 key = 1;
+  optional string skey = 2;
+
+  optional sint64   ival = 3;
+  optional string   sval = 4;
+  optional bytes    bval = 5;
+  optional Interval tval = 6;
+  optional bool  boolval = 7;
+}
+
+message Message {
+  required TAI64n timestamp = 1;
+  required uint32 type = 2;
+
+  repeated Attribute attributes = 3;
+
+  optional string session_id = 4;
+}

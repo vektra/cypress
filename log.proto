@@ -1,0 +1,35 @@
+package cypress;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/vektra/tai64n/tai64n.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+
+message Interval {
+  required uint64 seconds = 1 [(gogoproto.nullable) = false, (gogoproto.moretags) = "codec:\"seconds\""];
+  required uint32 nanoseconds = 2 [(gogoproto.nullable) = false, (gogoproto.moretags) = "codec:\"nanoseconds\""];
+}
+
+message Attribute {
+  required uint32 key = 1 [(gogoproto.nullable) = false, (gogoproto.moretags) = "codec:\"key,omitempty\""];
+  optional string skey = 2 [(gogoproto.moretags) = "codec:\"skey,omitempty\""];
+
+  optional sint64   ival = 3 [(gogoproto.moretags) = "codec:\"ival,omitempty\""];
+  optional string   sval = 4 [(gogoproto.moretags) = "codec:\"sval,omitempty\""];
+  optional bytes    bval = 5 [(gogoproto.moretags) = "codec:\"bval,omitempty\""];
+  optional Interval tval = 6 [(gogoproto.moretags) = "codec:\"tval,omitempty\""];
+  optional bool  boolval = 7 [(gogoproto.moretags) = "codec:\"boolval,omitempty\""];
+}
+
+message Message {
+  required tai64n.TAI64n timestamp = 1 [(gogoproto.moretags) = "codec:\"timestamp\""];
+  required uint32 type = 2 [(gogoproto.moretags) = "codec:\"type\""];
+
+  repeated Attribute attributes = 3 [(gogoproto.moretags) = "codec:\"attributes\""];
+
+  optional string session_id = 4 [(gogoproto.moretags) = "codec:\"session_id\""];
+}
