@@ -11,7 +11,7 @@ type Parser interface {
 
 type SwitchStream struct {
 	Input  io.Reader
-	Out    Reciever
+	Out    Receiver
 	Source string
 
 	parser Parser

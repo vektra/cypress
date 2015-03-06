@@ -83,7 +83,7 @@ func ToProtobuf(m *Message) ([]byte, error) {
 
 type PBStream struct {
 	Src io.Reader
-	Out Reciever
+	Out Receiver
 }
 
 func (pb *PBStream) Parse() error {

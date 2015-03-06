@@ -18,7 +18,7 @@ const tokens = scanner.ScanIdents | scanner.ScanInts | scanner.ScanStrings
 
 type KVStream struct {
 	Src    io.Reader
-	Out    Reciever
+	Out    Receiver
 	Bare   bool
 	Source string
 }
@@ -274,7 +274,7 @@ func (s *KVStream) Parse() error {
 	return nil
 }
 
-func ParseKVStream(in io.Reader, r Reciever) {
+func ParseKVStream(in io.Reader, r Receiver) {
 	s := KVStream{in, r, false, ""}
 	s.Parse()
 }

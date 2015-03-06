@@ -17,7 +17,7 @@ import (
 func TestLocal(t *testing.T) {
 	n := neko.Start(t)
 
-	var mr cypress.MockReciever
+	var mr cypress.MockReceiver
 
 	n.CheckMock(&mr.Mock)
 

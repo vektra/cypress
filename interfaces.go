@@ -6,11 +6,11 @@ import (
 	"github.com/vektra/tai64n"
 )
 
-type Reciever interface {
+type Receiver interface {
 	Read(msg *Message) error
 }
 
-type WireReciever interface {
+type WireReceiver interface {
 	ReadWire(msg *WireMessage) error
 }
 

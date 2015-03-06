@@ -157,7 +157,7 @@ func parseIntervalMap(data []byte) (*Attribute, error) {
 
 type JsonStream struct {
 	Src io.Reader
-	Out Reciever
+	Out Receiver
 }
 
 func (js *JsonStream) Parse() error {

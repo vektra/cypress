@@ -16,11 +16,11 @@ import (
 const cPlus = '+'
 const cExclamation = '!'
 
-type ManyReciever struct {
-	recievers []cypress.Reciever
+type ManyReceiver struct {
+	recievers []cypress.Receiver
 }
 
-func (mr *ManyReciever) Read(m *cypress.Message) error {
+func (mr *ManyReceiver) Read(m *cypress.Message) error {
 	for _, r := range mr.recievers {
 		err := r.Read(m)
 		if err != nil {
@@ -31,20 +31,20 @@ func (mr *ManyReciever) Read(m *cypress.Message) error {
 	return nil
 }
 
-func ManyRecievers(r ...cypress.Reciever) *ManyReciever {
-	return &ManyReciever{r}
+func ManyReceivers(r ...cypress.Receiver) *ManyReceiver {
+	return &ManyReceiver{r}
 }
 
-func LocalCollector(r cypress.Reciever) Source {
+func LocalCollector(r cypress.Receiver) Source {
 	return newServer(cypress.LogPath(), r)
 }
 
-func newServer(path string, r cypress.Reciever) *server {
+func newServer(path string, r cypress.Receiver) *server {
 	return &server{
 		path:  path,
 		conns: list.New(),
 		recv:  r,
-		taps:  ManyRecievers(),
+		taps:  ManyReceivers(),
 	}
 }
 
@@ -55,8 +55,8 @@ type server struct {
 
 	server net.Listener
 	conns  *list.List
-	recv   cypress.Reciever
-	taps   *ManyReciever
+	recv   cypress.Receiver
+	taps   *ManyReceiver
 }
 
 type tap struct {

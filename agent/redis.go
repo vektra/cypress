@@ -75,11 +75,11 @@ type RedisInput struct {
 	conn     redis.Conn
 	host     string
 	listName string
-	recv     cypress.Reciever
+	recv     cypress.Receiver
 	active   bool
 }
 
-func (r *RedisInput) Init(host, list string, rc cypress.Reciever) error {
+func (r *RedisInput) Init(host, list string, rc cypress.Receiver) error {
 	c, err := redis.Dial("tcp", host)
 
 	if err != nil {

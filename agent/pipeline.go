@@ -21,7 +21,7 @@ func NewSpooolFile(dir string) *SpoolFile {
 	return sf
 }
 
-func ParseSource(s string, r cypress.Reciever) Source {
+func ParseSource(s string, r cypress.Receiver) Source {
 	if s == "local" {
 		return LocalCollector(r)
 	} else {
@@ -42,7 +42,7 @@ func ParseSource(s string, r cypress.Reciever) Source {
 	}
 }
 
-func ParseSink(s string) (cypress.Reciever, error) {
+func ParseSink(s string) (cypress.Receiver, error) {
 	switch s {
 	case "spool":
 		return NewSpooolFile(DefaultSpoolDir), nil
@@ -69,7 +69,7 @@ func ParseSink(s string) (cypress.Reciever, error) {
 }
 
 type Pipeline struct {
-	Recievers *ManyReciever
+	Receivers *ManyReceiver
 	Sources   []Source
 }
 
@@ -108,7 +108,7 @@ func (p *Pipeline) Close() {
 }
 
 func MakePipeline(srcs, sinks string) (*Pipeline, error) {
-	recvs := []cypress.Reciever{}
+	recvs := []cypress.Receiver{}
 
 	for _, s := range strings.Split(sinks, ",") {
 		r, err := ParseSink(s)
@@ -119,10 +119,10 @@ func MakePipeline(srcs, sinks string) (*Pipeline, error) {
 		recvs = append(recvs, r)
 	}
 
-	pi := &Pipeline{Recievers: ManyRecievers(recvs...)}
+	pi := &Pipeline{Receivers: ManyReceivers(recvs...)}
 
 	for _, s := range strings.Split(srcs, ",") {
-		src := ParseSource(s, pi.Recievers)
+		src := ParseSource(s, pi.Receivers)
 
 		pi.Sources = append(pi.Sources, src)
 	}
