@@ -2,6 +2,7 @@ package cypress
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -79,16 +80,20 @@ func (l *localConn) save(m *Message) {
 
 var cPlus = []byte("+")
 
-func (l *localConn) send(m *Message) error {
-	_, err := l.conn.Write(cPlus)
+func WriteLocalMessage(w io.Writer, m *Message) error {
+	_, err := w.Write(cPlus)
 
 	if err != nil {
 		return err
 	}
 
-	_, err = m.WriteWire(l.conn)
+	_, err = m.WriteWire(w)
 
 	return err
+}
+
+func (l *localConn) send(m *Message) error {
+	return WriteLocalMessage(l.conn, m)
 }
 
 func (l *localConn) flush() {

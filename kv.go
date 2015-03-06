@@ -16,10 +16,6 @@ var EParseError = errors.New("Unable to parse line")
 const whitespace = 1<<'\t' | 1<<' '
 const tokens = scanner.ScanIdents | scanner.ScanInts | scanner.ScanStrings
 
-type Reciever interface {
-	Read(msg *Message) error
-}
-
 type KVStream struct {
 	Src    io.Reader
 	Out    Reciever
