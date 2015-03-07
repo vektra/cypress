@@ -59,6 +59,8 @@ func TestLocal(t *testing.T) {
 
 		cypress.WriteLocalMessage(conn, m)
 
+		time.Sleep(1 * time.Second)
+
 		conn.Close()
 		lc.Close()
 
