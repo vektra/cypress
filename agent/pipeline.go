@@ -4,22 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/plugin"
 )
-
-func NewSpooolFile(dir string) *SpoolFile {
-	sf := new(SpoolFile)
-	os.MkdirAll(dir, 0755)
-
-	if err := sf.Start(dir); err != nil {
-		panic(err)
-	}
-
-	return sf
-}
 
 func ParseSource(s string, r cypress.Receiver) Source {
 	if s == "local" {
@@ -45,10 +34,10 @@ func ParseSource(s string, r cypress.Receiver) Source {
 func ParseSink(s string) (cypress.Receiver, error) {
 	switch s {
 	case "spool":
-		return NewSpooolFile(DefaultSpoolDir), nil
+		return plugin.NewSpoolFile(plugin.DefaultSpoolDir)
 	default:
 		if s[0:6] == "spool:" {
-			return NewSpooolFile(s[7:]), nil
+			return plugin.NewSpoolFile(s[7:])
 		} else {
 			uri, err := url.Parse(s)
 

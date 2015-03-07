@@ -1,4 +1,4 @@
-package agent
+package plugin
 
 import (
 	"encoding/binary"
@@ -13,10 +13,18 @@ import (
 )
 
 type SpoolFile struct {
+
+	// The size of each file will get before it's rotated
+	PerFileSize int64
+
+	// How many rotate files to keep
+	MaxFiles int
+
 	root    string
 	current string
 	file    *os.File
 	bytes   int64
+	buf     []byte
 
 	feeder chan *cypress.Message
 }
@@ -26,7 +34,7 @@ const MaxFiles = 10
 
 // So we'll spool 10 megs worth of logs max
 
-const DefaultSpoolDir = "/var/lib/vk-log/spool"
+const DefaultSpoolDir = "/var/lib/cypress/spool"
 
 func (sf *SpoolFile) openCurrent() error {
 	fd, err := os.OpenFile(sf.current, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -45,13 +53,18 @@ func (sf *SpoolFile) openCurrent() error {
 
 	sf.bytes = fi.Size()
 
+	sf.buf = make([]byte, 1024)
+
 	return nil
 }
 
-func (sf *SpoolFile) Start(root string) error {
-	sf.root = root
+func NewSpoolFile(root string) (*SpoolFile, error) {
+	sf := &SpoolFile{
+		PerFileSize: PerFileSize,
+		MaxFiles:    MaxFiles,
+	}
 
-	sf.feeder = make(chan *cypress.Message)
+	sf.root = root
 
 	sf.pruneOldFiles()
 
@@ -60,12 +73,10 @@ func (sf *SpoolFile) Start(root string) error {
 	err := sf.openCurrent()
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	go sf.process()
-
-	return nil
+	return sf, nil
 }
 
 func (sf *SpoolFile) newFilename() string {
@@ -100,7 +111,7 @@ func (sf *SpoolFile) pruneOldFiles() {
 		}
 	}
 
-	if count <= MaxFiles {
+	if count <= sf.MaxFiles {
 		return
 	}
 
@@ -115,51 +126,39 @@ func (sf *SpoolFile) pruneOldFiles() {
 	}
 }
 
-func (sf *SpoolFile) process() {
-	for {
-		m := <-sf.feeder
+func (sf *SpoolFile) Read(m *cypress.Message) error {
+	data, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
 
-		data, err := proto.Marshal(m)
+	binary.BigEndian.PutUint64(sf.buf, uint64(len(data)))
 
-		if err == nil {
-			var buf [4]byte
+	_, err = sf.file.Write(sf.buf)
+	if err != nil {
+		return err
+	}
 
-			binary.BigEndian.PutUint32(buf[:], uint32(len(data)))
+	_, err = sf.file.Write(data)
+	if err != nil {
+		return err
+	}
 
-			_, err = sf.file.Write(buf[:])
+	sf.file.Sync()
 
-			if err != nil {
-				fmt.Printf("Error writing to current: %s\n", err)
-			}
+	sf.bytes += int64(len(data) + 4)
 
-			_, err = sf.file.Write(data)
+	if sf.bytes >= sf.PerFileSize {
+		sf.file.Close()
+		os.Rename(sf.current, sf.newFilename())
 
-			if err != nil {
-				fmt.Printf("Error writing to current: %s\n", err)
-			}
+		sf.pruneOldFiles()
 
-			sf.file.Sync()
-
-			sf.bytes += int64(len(data) + 4)
-
-			if sf.bytes >= PerFileSize {
-				sf.file.Close()
-				os.Rename(sf.current, sf.newFilename())
-
-				sf.pruneOldFiles()
-
-				err = sf.openCurrent()
-
-				if err != nil {
-					fmt.Printf("Unable to open new current: %s", err)
-					return
-				}
-			}
+		err = sf.openCurrent()
+		if err != nil {
+			return err
 		}
 	}
-}
 
-func (sf *SpoolFile) Read(m *cypress.Message) error {
-	sf.feeder <- m
 	return nil
 }
