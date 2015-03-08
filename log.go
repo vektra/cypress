@@ -158,6 +158,34 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	m.KVPairsInto(buf)
 }
 
+func (m *Message) HumanString() string {
+	var buf bytes.Buffer
+
+	if m.GetType() == tMetric {
+		buf.WriteString("! ")
+	} else if m.GetType() == tTrace {
+		buf.WriteString("$ ")
+	} else if m.GetType() == tAudit {
+		buf.WriteString("* ")
+	} else {
+		buf.WriteString(" ")
+	}
+
+	buf.WriteString(" ")
+	buf.WriteString(m.GetTimestamp().String())
+	buf.WriteString(" ")
+
+	if s := m.GetSessionId(); len(s) > 0 {
+		buf.WriteString(s[:7])
+	} else {
+		buf.WriteString("0000000")
+	}
+
+	buf.WriteString(m.KVPairs())
+
+	return buf.String()
+}
+
 func (a *Attribute) StringKey() string {
 	if a.Key != 0 {
 		return PresetKeysFromIndex[a.Key]
