@@ -1,39 +1,45 @@
 package cypress
 
 import (
+	"bufio"
 	"encoding/binary"
 	"io"
 )
 
 type Decoder struct {
+	r   *bufio.Reader
 	buf []byte
 }
 
-func NewDecoder() *Decoder {
+func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
+		r:   bufio.NewReader(r),
 		buf: make([]byte, 1024),
 	}
 }
 
-func (d *Decoder) DecodeFrom(r io.Reader) (*Message, error) {
-	_, err := io.ReadFull(r, d.buf[:5])
+func (d *Decoder) Decode() (*Message, error) {
+	b, err := d.r.ReadByte()
 	if err != nil {
 		return nil, err
 	}
 
-	if d.buf[0] != '+' {
+	if b != '+' {
 		return nil, ErrInvalidMessage
 	}
 
-	dataLen := binary.BigEndian.Uint32(d.buf[1:5])
+	dataLen, err := binary.ReadUvarint(d.r)
+	if err != nil {
+		return nil, err
+	}
 
-	if uint32(len(d.buf)) < dataLen {
+	if uint64(len(d.buf)) < dataLen {
 		d.buf = make([]byte, dataLen)
 	}
 
 	buf := d.buf[:dataLen]
 
-	_, err = io.ReadFull(r, buf)
+	_, err = io.ReadFull(d.r, buf)
 	if err != nil {
 		return nil, err
 	}

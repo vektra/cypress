@@ -6,23 +6,25 @@ import (
 )
 
 type Encoder struct {
+	w   io.Writer
 	buf []byte
 }
 
-func NewEncoder() *Encoder {
+func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
-		make([]byte, 1024),
+		w:   w,
+		buf: make([]byte, 1024),
 	}
 }
 
-func (e *Encoder) EncodeTo(m *Message, w io.Writer) (uint64, error) {
+func (e *Encoder) Encode(m *Message) (uint64, error) {
 	sz := m.Size()
 
 	e.buf[0] = '+'
 
-	binary.BigEndian.PutUint32(e.buf[1:5], uint32(sz))
+	cnt := binary.PutUvarint(e.buf[1:], uint64(sz))
 
-	_, err := w.Write(e.buf[:5])
+	_, err := e.w.Write(e.buf[:cnt+1])
 	if err != nil {
 		return 0, err
 	}
@@ -31,12 +33,12 @@ func (e *Encoder) EncodeTo(m *Message, w io.Writer) (uint64, error) {
 		e.buf = make([]byte, sz)
 	}
 
-	cnt, err := m.MarshalTo(e.buf)
+	cnt, err = m.MarshalTo(e.buf)
 	if err != nil {
 		return 0, err
 	}
 
-	_, err = w.Write(e.buf[:cnt])
+	_, err = e.w.Write(e.buf[:cnt])
 	if err != nil {
 		return 0, err
 	}

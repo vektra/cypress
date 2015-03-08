@@ -46,9 +46,9 @@ func TestSpool(t *testing.T) {
 		f, err := os.Open(filepath.Join(tmpdir, "current"))
 		require.NoError(t, err)
 
-		dec := cypress.NewDecoder()
+		dec := cypress.NewDecoder(f)
 
-		m2, err := dec.DecodeFrom(f)
+		m2, err := dec.Decode()
 		require.NoError(t, err)
 
 		assert.Equal(t, m.GetTimestamp(), m2.GetTimestamp())

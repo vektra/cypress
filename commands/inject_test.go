@@ -57,9 +57,9 @@ func TestInject(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		enc := cypress.NewEncoder()
+		enc := cypress.NewEncoder(&buf)
 
-		_, err := enc.EncodeTo(m, &buf)
+		_, err := enc.Encode(m)
 
 		mr.On("Receive", m).Return(nil)
 

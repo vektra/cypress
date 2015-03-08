@@ -30,10 +30,10 @@ type PBStream struct {
 }
 
 func (pb *PBStream) Parse() error {
-	dec := NewDecoder()
+	dec := NewDecoder(pb.Src)
 
 	for {
-		m, err := dec.DecodeFrom(pb.Src)
+		m, err := dec.Decode()
 		if err != nil {
 			return err
 		}

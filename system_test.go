@@ -37,9 +37,9 @@ func TestSendingLogsToSystem(t *testing.T) {
 	c, err := l.Accept()
 	require.NoError(t, err)
 
-	dec := NewDecoder()
+	dec := NewDecoder(c)
 
-	m2, err := dec.DecodeFrom(c)
+	m2, err := dec.Decode()
 	require.NoError(t, err)
 
 	assert.Equal(t, m1, m2)
@@ -65,9 +65,9 @@ func TestClientBuffersMessages(t *testing.T) {
 	c, err := l.Accept()
 	require.NoError(t, err)
 
-	dec := NewDecoder()
+	dec := NewDecoder(c)
 
-	m2, err := dec.DecodeFrom(c)
+	m2, err := dec.Decode()
 
 	assert.Equal(t, m1, m2)
 
@@ -87,7 +87,9 @@ func TestClientBuffersMessages(t *testing.T) {
 	c, err = l.Accept()
 	require.NoError(t, err)
 
-	m4, err := dec.DecodeFrom(c)
+	dec = NewDecoder(c)
+
+	m4, err := dec.Decode()
 
 	assert.Equal(t, m3, m4)
 }

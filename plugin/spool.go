@@ -56,6 +56,8 @@ func (sf *Spool) openCurrent() error {
 
 	sf.buf = make([]byte, 1024)
 
+	sf.enc = cypress.NewEncoder(sf.file)
+
 	return nil
 }
 
@@ -63,7 +65,6 @@ func NewSpool(root string) (*Spool, error) {
 	sf := &Spool{
 		PerFileSize: PerFileSize,
 		MaxFiles:    MaxFiles,
-		enc:         cypress.NewEncoder(),
 	}
 
 	sf.root = root
@@ -129,7 +130,7 @@ func (sf *Spool) pruneOldFiles() {
 }
 
 func (sf *Spool) Receive(m *cypress.Message) error {
-	cnt, err := sf.enc.EncodeTo(m, sf.file)
+	cnt, err := sf.enc.Encode(m)
 
 	sf.file.Sync()
 
@@ -182,7 +183,9 @@ func (s *Spool) Generator() (*SpoolGenerator, error) {
 		}
 	}
 
-	return &SpoolGenerator{files: files, dec: cypress.NewDecoder()}, nil
+	dec := cypress.NewDecoder(files[0])
+
+	return &SpoolGenerator{files: files, dec: dec}, nil
 }
 
 type SpoolGenerator struct {
@@ -201,7 +204,7 @@ func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
 	}
 
 	for {
-		m, err := sg.dec.DecodeFrom(sg.files[sg.current])
+		m, err := sg.dec.Decode()
 		if err != nil {
 			if err != io.EOF {
 				return nil, err
@@ -213,6 +216,8 @@ func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
 				sg.closed = true
 				return nil, io.EOF
 			}
+
+			sg.dec = cypress.NewDecoder(sg.files[sg.current])
 
 			continue
 		}

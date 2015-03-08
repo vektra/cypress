@@ -85,10 +85,10 @@ func (s *server) closeConns() {
 }
 
 func (s *server) serve(c net.Conn, e *list.Element) {
-	dec := cypress.NewDecoder()
+	dec := cypress.NewDecoder(c)
 
 	for {
-		m, err := dec.DecodeFrom(c)
+		m, err := dec.Decode()
 		if err != nil {
 			if err == io.EOF {
 				c.Close()

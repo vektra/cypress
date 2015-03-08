@@ -59,12 +59,12 @@ func TestSwitchStream(t *testing.T) {
 		m := Log()
 		m.Add("greeting", "hello")
 
-		enc := NewEncoder()
+		enc := NewEncoder(buf)
 
-		_, err := enc.EncodeTo(m, buf)
+		_, err := enc.Encode(m)
 		require.NoError(t, err)
 
-		_, err = enc.EncodeTo(m, buf)
+		_, err = enc.Encode(m)
 		require.NoError(t, err)
 
 		err = ss.Parse()

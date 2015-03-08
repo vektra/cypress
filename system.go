@@ -81,9 +81,9 @@ func (l *localConn) save(m *Message) {
 var cPlus = []byte("+")
 
 func WriteLocalMessage(w io.Writer, m *Message) error {
-	enc := NewEncoder()
+	enc := NewEncoder(w)
 
-	_, err := enc.EncodeTo(m, w)
+	_, err := enc.Encode(m)
 	return err
 }
 
