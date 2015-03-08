@@ -1,18 +1,19 @@
 package plugin
 
 import (
-	"encoding/binary"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"sort"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
 )
 
-type SpoolFile struct {
+type Spool struct {
 
 	// The size of each file will get before it's rotated
 	PerFileSize int64
@@ -27,6 +28,8 @@ type SpoolFile struct {
 	buf     []byte
 
 	feeder chan *cypress.Message
+
+	enc *cypress.Encoder
 }
 
 const PerFileSize = (1024 * 1024) // 1 meg per file
@@ -36,9 +39,8 @@ const MaxFiles = 10
 
 const DefaultSpoolDir = "/var/lib/cypress/spool"
 
-func (sf *SpoolFile) openCurrent() error {
+func (sf *Spool) openCurrent() error {
 	fd, err := os.OpenFile(sf.current, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,6 @@ func (sf *SpoolFile) openCurrent() error {
 	sf.file = fd
 
 	fi, err := fd.Stat()
-
 	if err != nil {
 		return err
 	}
@@ -58,10 +59,11 @@ func (sf *SpoolFile) openCurrent() error {
 	return nil
 }
 
-func NewSpoolFile(root string) (*SpoolFile, error) {
-	sf := &SpoolFile{
+func NewSpool(root string) (*Spool, error) {
+	sf := &Spool{
 		PerFileSize: PerFileSize,
 		MaxFiles:    MaxFiles,
+		enc:         cypress.NewEncoder(),
 	}
 
 	sf.root = root
@@ -79,11 +81,11 @@ func NewSpoolFile(root string) (*SpoolFile, error) {
 	return sf, nil
 }
 
-func (sf *SpoolFile) newFilename() string {
+func (sf *Spool) newFilename() string {
 	return path.Join(sf.root, tai64n.Now().Label())
 }
 
-func (sf *SpoolFile) pruneOldFiles() {
+func (sf *Spool) pruneOldFiles() {
 	files, err := ioutil.ReadDir(sf.root)
 
 	if err != nil {
@@ -126,27 +128,12 @@ func (sf *SpoolFile) pruneOldFiles() {
 	}
 }
 
-func (sf *SpoolFile) Read(m *cypress.Message) error {
-	data, err := proto.Marshal(m)
-	if err != nil {
-		return err
-	}
-
-	binary.BigEndian.PutUint64(sf.buf, uint64(len(data)))
-
-	_, err = sf.file.Write(sf.buf)
-	if err != nil {
-		return err
-	}
-
-	_, err = sf.file.Write(data)
-	if err != nil {
-		return err
-	}
+func (sf *Spool) Read(m *cypress.Message) error {
+	cnt, err := sf.enc.EncodeTo(m, sf.file)
 
 	sf.file.Sync()
 
-	sf.bytes += int64(len(data) + 4)
+	sf.bytes += int64(cnt)
 
 	if sf.bytes >= sf.PerFileSize {
 		sf.file.Close()
@@ -158,6 +145,85 @@ func (sf *SpoolFile) Read(m *cypress.Message) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (s *Spool) Generator() (*SpoolGenerator, error) {
+	ents, err := ioutil.ReadDir(s.root)
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+
+	for _, e := range ents {
+		if e.Name() == "current" {
+			continue
+		}
+
+		names = append(names, e.Name())
+	}
+
+	sort.Strings(names)
+
+	names = append(names, "current")
+
+	// we open all the files up front because something might rotate them
+	// out and delete them, so we want to be sure we've still got access
+	// to them.
+	var files []*os.File
+
+	for _, name := range names {
+		f, err := os.Open(filepath.Join(s.root, name))
+		if err == nil {
+			files = append(files, f)
+		}
+	}
+
+	return &SpoolGenerator{files: files, dec: cypress.NewDecoder()}, nil
+}
+
+type SpoolGenerator struct {
+	closed  bool
+	files   []*os.File
+	current int
+
+	dec *cypress.Decoder
+}
+
+var _ = cypress.Generator(&SpoolGenerator{})
+
+func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
+	if sg.closed {
+		return nil, io.EOF
+	}
+
+	for {
+		m, err := sg.dec.DecodeFrom(sg.files[sg.current])
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+
+			sg.current++
+
+			if sg.current == len(sg.files) {
+				sg.closed = true
+				return nil, io.EOF
+			}
+
+			continue
+		}
+
+		return m, nil
+	}
+}
+
+func (sg *SpoolGenerator) Close() error {
+	for _, file := range sg.files {
+		file.Close()
 	}
 
 	return nil

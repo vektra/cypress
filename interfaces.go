@@ -14,6 +14,11 @@ type WireReceiver interface {
 	ReadWire(msg *WireMessage) error
 }
 
+type Generator interface {
+	Generate() (*Message, error)
+	Close() error
+}
+
 var ErrStopIteration = errors.New("stop iteration")
 
 type LogHandlerFunc func(*Message) error

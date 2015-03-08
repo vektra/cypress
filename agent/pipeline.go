@@ -34,10 +34,10 @@ func ParseSource(s string, r cypress.Receiver) Source {
 func ParseSink(s string) (cypress.Receiver, error) {
 	switch s {
 	case "spool":
-		return plugin.NewSpoolFile(plugin.DefaultSpoolDir)
+		return plugin.NewSpool(plugin.DefaultSpoolDir)
 	default:
 		if s[0:6] == "spool:" {
-			return plugin.NewSpoolFile(s[7:])
+			return plugin.NewSpool(s[7:])
 		} else {
 			uri, err := url.Parse(s)
 
