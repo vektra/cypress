@@ -134,7 +134,7 @@ func (s *KVStream) Parse() error {
 		case '$':
 			scan.Next()
 			m.Type = proto.Uint32(tTrace)
-		case '+':
+		case '*':
 			scan.Next()
 			m.Type = proto.Uint32(tAudit)
 		}

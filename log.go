@@ -143,7 +143,7 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	case m.GetType() == tTrace:
 		buf.WriteString("$ ")
 	case m.GetType() == tAudit:
-		buf.WriteString("+ ")
+		buf.WriteString("* ")
 	default:
 		buf.WriteString(" ")
 	}

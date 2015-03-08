@@ -297,7 +297,7 @@ func TestParseKVStreamTrace(t *testing.T) {
 }
 
 func TestParseKVStreamAudit(t *testing.T) {
-	line := ">+ id=1 size=171 for=\"-\""
+	line := ">* id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
 	var mbuf MessageBuffer
