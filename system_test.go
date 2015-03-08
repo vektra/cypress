@@ -24,8 +24,6 @@ func TestSendingLogsToSystem(t *testing.T) {
 
 	defer l.Close()
 
-	buf := make([]byte, 10)
-
 	m1 := Log()
 	m1.Add("hello", "world")
 
@@ -39,16 +37,9 @@ func TestSendingLogsToSystem(t *testing.T) {
 	c, err := l.Accept()
 	require.NoError(t, err)
 
-	n, err := c.Read(buf[:1])
-	require.NoError(t, err)
+	dec := NewDecoder()
 
-	assert.Equal(t, n, 1)
-
-	assert.Equal(t, "+", string(buf[:1]))
-
-	m2 := &Message{}
-
-	_, err = m2.ReadWire(c)
+	m2, err := dec.DecodeFrom(c)
 	require.NoError(t, err)
 
 	assert.Equal(t, m1, m2)
@@ -65,8 +56,6 @@ func TestClientBuffersMessages(t *testing.T) {
 	l, err := net.Listen("unix", path)
 	require.NoError(t, err)
 
-	buf := make([]byte, 10)
-
 	m1 := Log()
 	m1.Add("hello", "world")
 
@@ -76,13 +65,9 @@ func TestClientBuffersMessages(t *testing.T) {
 	c, err := l.Accept()
 	require.NoError(t, err)
 
-	_, err = c.Read(buf[:1])
-	require.NoError(t, err)
+	dec := NewDecoder()
 
-	m2 := &Message{}
-
-	_, err = m2.ReadWire(c)
-	require.NoError(t, err)
+	m2, err := dec.DecodeFrom(c)
 
 	assert.Equal(t, m1, m2)
 
@@ -102,13 +87,7 @@ func TestClientBuffersMessages(t *testing.T) {
 	c, err = l.Accept()
 	require.NoError(t, err)
 
-	_, err = c.Read(buf[:1])
-	require.NoError(t, err)
-
-	m4 := &Message{}
-
-	_, err = m4.ReadWire(c)
-	require.NoError(t, err)
+	m4, err := dec.DecodeFrom(c)
 
 	assert.Equal(t, m3, m4)
 }
