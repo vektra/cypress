@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"encoding/binary"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -44,20 +43,12 @@ func TestSpool(t *testing.T) {
 		err := sf.Read(m)
 		require.NoError(t, err)
 
-		data, err := ioutil.ReadFile(filepath.Join(tmpdir, "current"))
+		f, err := os.Open(filepath.Join(tmpdir, "current"))
 		require.NoError(t, err)
 
-		assert.Equal(t, byte('+'), data[0])
+		dec := cypress.NewDecoder()
 
-		marsh, err := m.Marshal()
-		require.NoError(t, err)
-
-		l := binary.BigEndian.Uint64(data[1:])
-		assert.Equal(t, l, uint64(len(marsh)))
-
-		m2 := &cypress.Message{}
-
-		err = m2.Unmarshal(data[9 : 9+l])
+		m2, err := dec.DecodeFrom(f)
 		require.NoError(t, err)
 
 		assert.Equal(t, m.GetTimestamp(), m2.GetTimestamp())
