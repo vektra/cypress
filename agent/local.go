@@ -14,7 +14,6 @@ import (
 )
 
 const cPlus = '+'
-const cExclamation = '!'
 
 type ManyReceiver struct {
 	recievers []cypress.Receiver
@@ -44,7 +43,6 @@ func newServer(path string, r cypress.Receiver) *server {
 		path:  path,
 		conns: list.New(),
 		recv:  r,
-		taps:  ManyReceivers(),
 	}
 }
 
@@ -56,39 +54,11 @@ type server struct {
 	server net.Listener
 	conns  *list.List
 	recv   cypress.Receiver
-	taps   *ManyReceiver
-}
-
-type tap struct {
-	c   net.Conn
-	idx int
 }
 
 type Source interface {
 	Start() error
 	Close()
-}
-
-func (t *tap) Read(m *cypress.Message) error {
-	_, err := m.WriteWire(t.c)
-	return err
-}
-
-func (s *server) addTap(c net.Conn) *tap {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	to := &tap{c, len(s.taps.recievers)}
-	s.taps.recievers = append(s.taps.recievers, to)
-	return to
-}
-
-func (s *server) removeTap(t *tap) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.taps.recievers = append(s.taps.recievers[:t.idx],
-		s.taps.recievers[t.idx+1:]...)
 }
 
 func (s *server) removeConn(e *list.Element) {
@@ -115,18 +85,12 @@ func (s *server) closeConns() {
 }
 
 func (s *server) serve(c net.Conn, e *list.Element) {
-	var buf [1]byte
-	var tapped *tap
+	dec := cypress.NewDecoder()
 
 	for {
-		_, err := c.Read(buf[:])
-
+		m, err := dec.DecodeFrom(c)
 		if err != nil {
 			if err == io.EOF {
-				if tapped != nil {
-					s.removeTap(tapped)
-				}
-
 				c.Close()
 				s.removeConn(e)
 				return
@@ -135,31 +99,7 @@ func (s *server) serve(c net.Conn, e *list.Element) {
 			fmt.Printf("Error reading message: %s\n", err)
 		}
 
-		switch buf[0] {
-		case cPlus:
-			m := &cypress.Message{}
-			_, err := m.ReadWire(c)
-			if err != nil {
-				if err == io.EOF {
-					if tapped != nil {
-						s.removeTap(tapped)
-					}
-
-					s.removeConn(e)
-					c.Close()
-					return
-				}
-
-				fmt.Printf("Error reading message: %s\n", err)
-			} else {
-				s.taps.Read(m)
-				s.recv.Read(m)
-			}
-		case cExclamation:
-			tapped = s.addTap(c)
-		default:
-			fmt.Printf("Bad message recieved\n")
-		}
+		s.recv.Read(m)
 	}
 }
 
