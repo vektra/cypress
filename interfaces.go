@@ -7,11 +7,11 @@ import (
 )
 
 type Receiver interface {
-	Read(msg *Message) error
+	Receive(msg *Message) error
 }
 
 type WireReceiver interface {
-	ReadWire(msg *WireMessage) error
+	ReceiveWire(msg *WireMessage) error
 }
 
 type Generator interface {

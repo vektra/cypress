@@ -38,7 +38,7 @@ func TestLocal(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "tests")
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
 		wg.Add(1)
 

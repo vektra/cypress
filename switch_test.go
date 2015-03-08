@@ -16,7 +16,7 @@ type logSink struct {
 	Messages []*Message
 }
 
-func (v *logSink) Read(m *Message) error {
+func (v *logSink) Receive(m *Message) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 

@@ -19,9 +19,9 @@ type ManyReceiver struct {
 	recievers []cypress.Receiver
 }
 
-func (mr *ManyReceiver) Read(m *cypress.Message) error {
+func (mr *ManyReceiver) Receive(m *cypress.Message) error {
 	for _, r := range mr.recievers {
-		err := r.Read(m)
+		err := r.Receive(m)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (s *server) serve(c net.Conn, e *list.Element) {
 			fmt.Printf("Error reading message: %s\n", err)
 		}
 
-		s.recv.Read(m)
+		s.recv.Receive(m)
 	}
 }
 

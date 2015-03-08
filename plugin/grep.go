@@ -17,7 +17,7 @@ func NewGrep(out cypress.Receiver, field string, regexp *regexp.Regexp) (*Grep, 
 	return &Grep{out, field, regexp}, nil
 }
 
-func (g *Grep) Read(m *cypress.Message) error {
+func (g *Grep) Receive(m *cypress.Message) error {
 	if f, ok := m.Get(g.field); ok {
 		var val string
 
@@ -28,7 +28,7 @@ func (g *Grep) Read(m *cypress.Message) error {
 		}
 
 		if g.regexp.MatchString(val) {
-			return g.out.Read(m)
+			return g.out.Receive(m)
 		}
 	}
 

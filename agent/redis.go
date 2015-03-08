@@ -59,7 +59,7 @@ func (r *RedisOutput) process() {
 	}
 }
 
-func (r *RedisOutput) Read(m *cypress.Message) error {
+func (r *RedisOutput) Receive(m *cypress.Message) error {
 	data, err := proto.Marshal(m)
 
 	if err != nil {
@@ -134,7 +134,7 @@ func (r *RedisInput) Start() error {
 			continue
 		}
 
-		r.recv.Read(m)
+		r.recv.Receive(m)
 	}
 
 	return nil

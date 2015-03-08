@@ -34,7 +34,7 @@ func TestInject(t *testing.T) {
 
 		buf.WriteString(str + "\n")
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
 		err := inj.Run()
 		require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestInject(t *testing.T) {
 		err := json.NewEncoder(&buf).Encode(m)
 		require.NoError(t, err)
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
 		err = inj.Run()
 		require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestInject(t *testing.T) {
 
 		_, err := enc.EncodeTo(m, &buf)
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
 		err = inj.Run()
 		require.NoError(t, err)

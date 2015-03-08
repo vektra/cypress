@@ -171,7 +171,7 @@ func (js *JsonStream) Parse() error {
 			return err
 		}
 
-		js.Out.Read(m)
+		js.Out.Receive(m)
 	}
 
 	return nil

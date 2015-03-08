@@ -128,7 +128,7 @@ func (sf *Spool) pruneOldFiles() {
 	}
 }
 
-func (sf *Spool) Read(m *cypress.Message) error {
+func (sf *Spool) Receive(m *cypress.Message) error {
 	cnt, err := sf.enc.EncodeTo(m, sf.file)
 
 	sf.file.Sync()

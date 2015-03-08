@@ -6,7 +6,7 @@ type MockReceiver struct {
 	mock.Mock
 }
 
-func (m *MockReceiver) Read(msg *Message) error {
+func (m *MockReceiver) Receive(msg *Message) error {
 	ret := m.Called(msg)
 
 	r0 := ret.Error(0)

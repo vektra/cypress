@@ -38,7 +38,7 @@ func (pb *PBStream) Parse() error {
 			return err
 		}
 
-		pb.Out.Read(m)
+		pb.Out.Receive(m)
 	}
 
 	return nil

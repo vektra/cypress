@@ -23,15 +23,15 @@ func TestGrep(t *testing.T) {
 		m := cypress.Log()
 		m.Add("message", "hello world")
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
 		m2 := cypress.Log()
 		m2.Add("message", "hello people")
 
-		err = grep.Read(m)
+		err = grep.Receive(m)
 		require.NoError(t, err)
 
-		err = grep.Read(m2)
+		err = grep.Receive(m2)
 		require.NoError(t, err)
 	})
 
@@ -42,9 +42,9 @@ func TestGrep(t *testing.T) {
 		m := cypress.Log()
 		m.Add("age", 35)
 
-		mr.On("Read", m).Return(nil)
+		mr.On("Receive", m).Return(nil)
 
-		err = grep.Read(m)
+		err = grep.Receive(m)
 		require.NoError(t, err)
 	})
 

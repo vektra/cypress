@@ -37,7 +37,7 @@ func (kvs *KVStream) skipToStart(s *scanner.Scanner) rune {
 					}
 
 					m.AddString("message", buf.String())
-					kvs.Out.Read(m)
+					kvs.Out.Receive(m)
 
 					buf.Reset()
 				}
@@ -58,7 +58,7 @@ func (kvs *KVStream) skipToStart(s *scanner.Scanner) rune {
 					}
 
 					m.AddString("message", buf.String())
-					kvs.Out.Read(m)
+					kvs.Out.Receive(m)
 
 				}
 				return scanner.EOF
@@ -194,7 +194,7 @@ func (s *KVStream) Parse() error {
 
 			if tok == '\n' || tok == scanner.EOF {
 				if m != nil {
-					s.Out.Read(m)
+					s.Out.Receive(m)
 				}
 
 				break
@@ -283,7 +283,7 @@ type MessageBuffer struct {
 	Messages []*Message
 }
 
-func (b *MessageBuffer) Read(m *Message) (err error) {
+func (b *MessageBuffer) Receive(m *Message) (err error) {
 	b.Messages = append(b.Messages, m)
 	return nil
 }

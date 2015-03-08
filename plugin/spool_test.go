@@ -40,7 +40,7 @@ func TestSpool(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		err := sf.Read(m)
+		err := sf.Receive(m)
 		require.NoError(t, err)
 
 		f, err := os.Open(filepath.Join(tmpdir, "current"))
@@ -62,7 +62,7 @@ func TestSpool(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		err := sf.Read(m)
+		err := sf.Receive(m)
 		require.NoError(t, err)
 
 		gen, err := sf.Generator()
