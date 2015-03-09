@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/mgutz/ansi"
+	"github.com/vektra/components/lib/request"
 	"github.com/vektra/errors"
 	"github.com/vektra/tai64n"
 )
@@ -156,6 +158,93 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	}
 
 	m.KVPairsInto(buf)
+}
+
+var voltColor = ansi.ColorCode("blue")
+var systemColor = ansi.ColorCode("yellow")
+var resetColor = ansi.ColorCode("reset")
+
+func (m *Message) SyslogString(colorize bool, align bool) string {
+	var buf bytes.Buffer
+
+	// Special case the logs that come out of the volts to make them
+	// easier to read
+	if m.GetType() == 0 {
+		if volt, ok := m.GetString("volt"); ok {
+			if log, ok := m.GetString("log"); ok {
+				if colorize {
+					buf.WriteString(voltColor)
+				}
+
+				time := m.GetTimestamp().Time().Format(time.RFC3339Nano)
+
+				buf.WriteString(time)
+
+				if align {
+					for i := len(time); i < 35; i++ {
+						buf.WriteString(" ")
+					}
+				}
+
+				buf.WriteString(" ")
+
+				if s := m.GetSessionId(); len(s) > 0 {
+					buf.WriteString(request.Id(s).String()[0:7])
+				} else {
+					buf.WriteString("0000000")
+				}
+
+				buf.WriteString(" ")
+				buf.WriteString(volt)
+				buf.WriteString(" ")
+				if colorize {
+					buf.WriteString(resetColor)
+				}
+				buf.WriteString(log)
+				return buf.String()
+			}
+		}
+	}
+
+	if colorize {
+		buf.WriteString(systemColor)
+	}
+
+	time := m.GetTimestamp().Time().Format(time.RFC3339Nano)
+
+	buf.WriteString(time)
+
+	if align {
+		for i := len(time); i < 35; i++ {
+			buf.WriteString(" ")
+		}
+	}
+
+	buf.WriteString(" ")
+
+	if s := m.GetSessionId(); len(s) > 0 {
+		buf.WriteString(request.Id(s).String()[0:7])
+	} else {
+		buf.WriteString("0000000")
+	}
+
+	buf.WriteString(" system ")
+
+	if colorize {
+		buf.WriteString(resetColor)
+	}
+
+	if m.GetType() == tMetric {
+		buf.WriteString("!")
+	} else if m.GetType() == tTrace {
+		buf.WriteString("$")
+	} else {
+		buf.WriteString("*")
+	}
+
+	buf.WriteString(m.KVPairs())
+
+	return buf.String()
 }
 
 func (m *Message) HumanString() string {
