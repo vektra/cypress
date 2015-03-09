@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/gogo/protobuf/proto"
 	"github.com/mgutz/ansi"
-	"github.com/vektra/components/lib/request"
 	"github.com/vektra/errors"
 	"github.com/vektra/tai64n"
 )
@@ -189,7 +189,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 				buf.WriteString(" ")
 
 				if s := m.GetSessionId(); len(s) > 0 {
-					buf.WriteString(request.Id(s).String()[0:7])
+					buf.WriteString(uuid.UUID(s).String()[0:7])
 				} else {
 					buf.WriteString("0000000")
 				}
@@ -223,7 +223,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 	buf.WriteString(" ")
 
 	if s := m.GetSessionId(); len(s) > 0 {
-		buf.WriteString(request.Id(s).String()[0:7])
+		buf.WriteString(uuid.UUID(s).String()[0:7])
 	} else {
 		buf.WriteString("0000000")
 	}
