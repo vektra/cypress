@@ -46,9 +46,12 @@ func TestSpool(t *testing.T) {
 		f, err := os.Open(filepath.Join(tmpdir, "current"))
 		require.NoError(t, err)
 
-		dec := cypress.NewDecoder(f)
+		sd := cypress.NewStreamDecoder(f)
 
-		m2, err := dec.Decode()
+		err = sd.Init()
+		require.NoError(t, err)
+
+		m2, err := sd.Generate()
 		require.NoError(t, err)
 
 		assert.Equal(t, m.GetTimestamp(), m2.GetTimestamp())
@@ -78,6 +81,48 @@ func TestSpool(t *testing.T) {
 		require.True(t, ok)
 
 		assert.Equal(t, "world", subject)
+	})
+
+	n.Only("reads all files when generating messages from the spool", func() {
+		m := cypress.Log()
+		m.Add("source", "old")
+
+		err := sf.Receive(m)
+		require.NoError(t, err)
+
+		err = sf.rotate()
+		require.NoError(t, err)
+
+		cm := cypress.Log()
+		cm.Add("source", "current")
+
+		err = sf.Receive(cm)
+		require.NoError(t, err)
+
+		s, err := NewSpool(tmpdir)
+		require.NoError(t, err)
+
+		gen, err := s.Generator()
+		require.NoError(t, err)
+
+		m2, err := gen.Generate()
+		require.NoError(t, err)
+
+		defer gen.Close()
+
+		assert.Equal(t, m.GetTimestamp(), m2.GetTimestamp())
+		subject, ok := m2.GetString("source")
+		require.True(t, ok)
+
+		assert.Equal(t, "old", subject)
+
+		m3, err := gen.Generate()
+		require.NoError(t, err)
+
+		source, ok := m3.GetString("source")
+		require.True(t, ok)
+
+		assert.Equal(t, "current", source)
 	})
 
 	n.Meow()

@@ -33,3 +33,13 @@ message Message {
 
   optional string session_id = 4 [(gogoproto.moretags) = "codec:\"session_id\""];
 }
+
+message StreamHeader {
+  enum Compression {
+    NONE = 0;
+    SNAPPY = 1;
+    ZLIB = 2;
+  }
+    
+  required Compression compression = 1;
+}

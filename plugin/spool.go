@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,6 +10,8 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+
+	"code.google.com/p/snappy-go/snappy"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
@@ -24,6 +28,7 @@ type Spool struct {
 	root    string
 	current string
 	file    *os.File
+	output  io.Writer
 	bytes   int64
 	buf     []byte
 
@@ -54,9 +59,34 @@ func (sf *Spool) openCurrent() error {
 
 	sf.bytes = fi.Size()
 
+	if sf.bytes == 0 {
+		hdr := &cypress.StreamHeader{
+			Compression: cypress.StreamHeader_SNAPPY.Enum(),
+		}
+
+		var buf bytes.Buffer
+		buf.WriteString("-")
+
+		data, err := hdr.Marshal()
+		if err != nil {
+			return err
+		}
+
+		szbuf := make([]byte, 10)
+
+		cnt := binary.PutUvarint(szbuf, uint64(len(data)))
+
+		buf.Write(szbuf[:cnt])
+		buf.Write(data)
+
+		sf.file.Write(buf.Bytes())
+	}
+
+	sf.output = snappy.NewWriter(sf.file)
+
 	sf.buf = make([]byte, 1024)
 
-	sf.enc = cypress.NewEncoder(sf.file)
+	sf.enc = cypress.NewEncoder(sf.output)
 
 	return nil
 }
@@ -131,21 +161,33 @@ func (sf *Spool) pruneOldFiles() {
 
 func (sf *Spool) Receive(m *cypress.Message) error {
 	cnt, err := sf.enc.Encode(m)
+	if err != nil {
+		return err
+	}
 
 	sf.file.Sync()
 
 	sf.bytes += int64(cnt)
 
 	if sf.bytes >= sf.PerFileSize {
-		sf.file.Close()
-		os.Rename(sf.current, sf.newFilename())
-
-		sf.pruneOldFiles()
-
-		err = sf.openCurrent()
+		err := sf.rotate()
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (sf *Spool) rotate() error {
+	sf.file.Close()
+	os.Rename(sf.current, sf.newFilename())
+
+	sf.pruneOldFiles()
+
+	err := sf.openCurrent()
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -183,7 +225,11 @@ func (s *Spool) Generator() (*SpoolGenerator, error) {
 		}
 	}
 
-	dec := cypress.NewDecoder(files[0])
+	dec := cypress.NewStreamDecoder(files[0])
+	err = dec.Init()
+	if err != nil {
+		return nil, err
+	}
 
 	return &SpoolGenerator{files: files, dec: dec}, nil
 }
@@ -193,7 +239,7 @@ type SpoolGenerator struct {
 	files   []*os.File
 	current int
 
-	dec *cypress.Decoder
+	dec *cypress.StreamDecoder
 }
 
 var _ = cypress.Generator(&SpoolGenerator{})
@@ -204,7 +250,7 @@ func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
 	}
 
 	for {
-		m, err := sg.dec.Decode()
+		m, err := sg.dec.Generate()
 		if err != nil {
 			if err != io.EOF {
 				return nil, err
@@ -217,7 +263,13 @@ func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
 				return nil, io.EOF
 			}
 
-			sg.dec = cypress.NewDecoder(sg.files[sg.current])
+			dec := cypress.NewStreamDecoder(sg.files[sg.current])
+			err = dec.Init()
+			if err != nil {
+				return nil, err
+			}
+
+			sg.dec = dec
 
 			continue
 		}

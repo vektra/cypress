@@ -19,6 +19,10 @@ type Generator interface {
 	Close() error
 }
 
+type Parser interface {
+	Parse() error
+}
+
 var ErrStopIteration = errors.New("stop iteration")
 
 type LogHandlerFunc func(*Message) error

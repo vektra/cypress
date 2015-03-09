@@ -5,10 +5,6 @@ import (
 	"io"
 )
 
-type Parser interface {
-	Parse() error
-}
-
 type SwitchStream struct {
 	Input  io.Reader
 	Out    Receiver
