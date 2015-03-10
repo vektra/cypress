@@ -29,21 +29,7 @@ func (p *Probe) Probe() error {
 		return nil
 	}
 
-	size, err := ReadUvarint(p.r, p.buf)
-	if err != nil {
-		return err
-	}
-
-	if len(p.buf) < int(size) {
-		p.buf = make([]byte, size)
-	}
-
-	_, err = io.ReadFull(p.r, p.buf[:size])
-	if err != nil {
-		return err
-	}
-
-	return p.hdr.Unmarshal(p.buf[:size])
+	return p.hdr.UnmarshalFrom(p.r)
 }
 
 func (p *Probe) Compression() StreamHeader_Compression {
