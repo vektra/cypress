@@ -15,7 +15,6 @@ func TestInject(t *testing.T) {
 
 	var (
 		mr  cypress.MockReceiver
-		inj *Inject
 		buf bytes.Buffer
 	)
 
@@ -23,7 +22,6 @@ func TestInject(t *testing.T) {
 
 	n.Setup(func() {
 		buf.Reset()
-		inj = NewInject(&buf, &mr)
 	})
 
 	n.It("reads a message and sends it to a receiver from kv format", func() {
@@ -36,7 +34,10 @@ func TestInject(t *testing.T) {
 
 		mr.On("Receive", m).Return(nil)
 
-		err := inj.Run()
+		inj, err := NewInject(&buf, &mr)
+		require.NoError(t, err)
+
+		err = inj.Run()
 		require.NoError(t, err)
 	})
 
@@ -48,6 +49,9 @@ func TestInject(t *testing.T) {
 		require.NoError(t, err)
 
 		mr.On("Receive", m).Return(nil)
+
+		inj, err := NewInject(&buf, &mr)
+		require.NoError(t, err)
 
 		err = inj.Run()
 		require.NoError(t, err)
@@ -62,6 +66,9 @@ func TestInject(t *testing.T) {
 		_, err := enc.Encode(m)
 
 		mr.On("Receive", m).Return(nil)
+
+		inj, err := NewInject(&buf, &mr)
+		require.NoError(t, err)
 
 		err = inj.Run()
 		require.NoError(t, err)

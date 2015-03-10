@@ -35,7 +35,10 @@ func (i *InjectCommand) Run(args []string) int {
 		return 1
 	}
 
-	inj := commands.NewInject(os.Stdin, spool)
+	inj, err := commands.NewInject(os.Stdin, spool)
+	if err != nil {
+		return 1
+	}
 
 	err = inj.Run()
 	if err != nil {

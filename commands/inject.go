@@ -13,10 +13,13 @@ type Inject struct {
 	dec *cypress.StreamDecoder
 }
 
-func NewInject(r io.Reader, recv cypress.Receiver) *Inject {
-	dec := cypress.NewStreamDecoder(r)
+func NewInject(r io.Reader, recv cypress.Receiver) (*Inject, error) {
+	dec, err := cypress.NewStreamDecoder(r)
+	if err != nil {
+		return nil, err
+	}
 
-	return &Inject{r, recv, dec}
+	return &Inject{r, recv, dec}, nil
 }
 
 func (i *Inject) Run() error {

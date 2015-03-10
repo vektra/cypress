@@ -46,9 +46,7 @@ func TestSpool(t *testing.T) {
 		f, err := os.Open(filepath.Join(tmpdir, "current"))
 		require.NoError(t, err)
 
-		sd := cypress.NewStreamDecoder(f)
-
-		err = sd.Init()
+		sd, err := cypress.NewStreamDecoder(f)
 		require.NoError(t, err)
 
 		m2, err := sd.Generate()

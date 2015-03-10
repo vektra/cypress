@@ -14,12 +14,7 @@ func TestStreamDecoder(t *testing.T) {
 
 	var (
 		buf bytes.Buffer
-		sd  *StreamDecoder
 	)
-
-	n.Setup(func() {
-		sd = NewStreamDecoder(&buf)
-	})
 
 	n.It("can decode a stream created by stream encoder", func() {
 		se := NewStreamEncoder(&buf)
@@ -33,7 +28,7 @@ func TestStreamDecoder(t *testing.T) {
 		err = se.Receive(m)
 		require.NoError(t, err)
 
-		err = sd.Init()
+		sd, err := NewStreamDecoder(&buf)
 		require.NoError(t, err)
 
 		m2, err := sd.Generate()

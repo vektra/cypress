@@ -7,11 +7,18 @@ type StreamDecoder struct {
 	dec *Decoder
 }
 
-func NewStreamDecoder(r io.Reader) *StreamDecoder {
-	return &StreamDecoder{r: r, dec: NewDecoder(r)}
+func NewStreamDecoder(r io.Reader) (*StreamDecoder, error) {
+	sd := &StreamDecoder{r: r, dec: NewDecoder(r)}
+
+	err := sd.init()
+	if err != nil {
+		return nil, err
+	}
+
+	return sd, nil
 }
 
-func (s *StreamDecoder) Init() error {
+func (s *StreamDecoder) init() error {
 	probe := NewProbe(s.r)
 
 	err := probe.Probe()

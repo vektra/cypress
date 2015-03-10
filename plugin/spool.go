@@ -214,8 +214,7 @@ func (s *Spool) Generator() (*SpoolGenerator, error) {
 		}
 	}
 
-	dec := cypress.NewStreamDecoder(files[0])
-	err = dec.Init()
+	dec, err := cypress.NewStreamDecoder(files[0])
 	if err != nil {
 		return nil, err
 	}
@@ -252,8 +251,7 @@ func (sg *SpoolGenerator) Generate() (*cypress.Message, error) {
 				return nil, io.EOF
 			}
 
-			dec := cypress.NewStreamDecoder(sg.files[sg.current])
-			err = dec.Init()
+			dec, err := cypress.NewStreamDecoder(sg.files[sg.current])
 			if err != nil {
 				return nil, err
 			}
