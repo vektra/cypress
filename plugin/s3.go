@@ -102,3 +102,78 @@ func (s3 *S3) LastFile() string {
 func (s3 *S3) Rotate() error {
 	return s3.spool.Rotate()
 }
+
+type S3Generator struct {
+	client *s3.S3
+	bucket *s3.Bucket
+
+	files []string
+	cur   int
+	dec   *cypress.StreamDecoder
+}
+
+func NewS3Generator(bucket string, auth aws.Auth, region aws.Region) (*S3Generator, error) {
+	client := s3.New(auth, region)
+
+	gen := &S3Generator{
+		client: client,
+		bucket: client.Bucket(bucket),
+		cur:    -1,
+	}
+
+	err := gen.getList()
+	if err != nil {
+		return nil, err
+	}
+
+	return gen, nil
+}
+
+func (g *S3Generator) getList() error {
+	list, err := g.bucket.List("@", "", "", 1000)
+	if err != nil {
+		return err
+	}
+
+	for _, key := range list.Contents {
+		g.files = append(g.files, key.Key)
+	}
+
+	return nil
+}
+
+func (g *S3Generator) Files() []string {
+	return g.files
+}
+
+func (g *S3Generator) Generate() (*cypress.Message, error) {
+restart:
+
+	if g.dec == nil {
+		g.cur++
+
+		if g.cur == len(g.files) {
+			return nil, io.EOF
+		}
+
+		r, err := g.bucket.GetReader(g.files[g.cur])
+		if err != nil {
+			return nil, err
+		}
+
+		dec, err := cypress.NewStreamDecoder(r)
+		if err != nil {
+			return nil, err
+		}
+
+		g.dec = dec
+	}
+
+	m, err := g.dec.Generate()
+	if err == io.EOF {
+		g.dec = nil
+		goto restart
+	}
+
+	return m, err
+}

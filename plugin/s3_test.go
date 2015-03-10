@@ -112,5 +112,59 @@ func TestS3(t *testing.T) {
 		assert.Equal(t, string(fileData), string(data))
 	})
 
+	n.It("can generate logs reading from an s3 bucket", func() {
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		m2, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+	})
+
+	n.It("reads logs from s3 files in time order", func() {
+		m := cypress.Log()
+		m.Add("source", "old")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		cm := cypress.Log()
+		cm.Add("source", "current")
+
+		err = s3a.Receive(cm)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		assert.Equal(t, 2, len(gen.Files()))
+
+		m2, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+
+		m3, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, cm, m3)
+	})
+
 	n.Meow()
 }
