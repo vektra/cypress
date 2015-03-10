@@ -10,18 +10,15 @@ type Inject struct {
 	r    io.Reader
 	recv cypress.Receiver
 
-	ss *cypress.SwitchStream
+	dec *cypress.StreamDecoder
 }
 
 func NewInject(r io.Reader, recv cypress.Receiver) *Inject {
-	ss := &cypress.SwitchStream{
-		Input: r,
-		Out:   recv,
-	}
+	dec := cypress.NewStreamDecoder(r)
 
-	return &Inject{r, recv, ss}
+	return &Inject{r, recv, dec}
 }
 
 func (i *Inject) Run() error {
-	return i.ss.Parse()
+	return cypress.Glue(i.dec, i.recv)
 }

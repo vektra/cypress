@@ -27,3 +27,7 @@ func (s *StreamDecoder) Init() error {
 func (s *StreamDecoder) Generate() (*Message, error) {
 	return s.dec.Decode()
 }
+
+func (s *StreamDecoder) Close() error {
+	return nil
+}

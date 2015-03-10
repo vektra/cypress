@@ -301,3 +301,243 @@ func ParseKV(line string) (*Message, error) {
 
 	return mbuf.Messages[0], nil
 }
+
+type KVParser struct {
+	r    io.Reader
+	bare bool
+	scan scanner.Scanner
+}
+
+func (kv *KVParser) readBare() (*Message, error) {
+	var buf bytes.Buffer
+
+	for {
+		switch tok := kv.scan.Next(); tok {
+		case '\n':
+			if buf.Len() > 0 {
+				m := Log()
+				m.AddString("message", buf.String())
+
+				return m, nil
+			}
+		case scanner.EOF:
+			if buf.Len() > 0 {
+				m := Log()
+
+				m.AddString("message", buf.String())
+
+				return m, nil
+			}
+
+			break
+
+		default:
+			buf.WriteString(string(tok))
+		}
+	}
+
+	return nil, io.EOF
+}
+
+func (kv *KVParser) skipToStart() rune {
+	for {
+		switch tok := kv.scan.Next(); tok {
+		case '\n':
+			tok = kv.scan.Peek()
+
+			if tok == '>' || tok == scanner.EOF {
+				kv.scan.Next() // consume the >
+				return tok
+			}
+
+		case scanner.EOF:
+			return scanner.EOF
+		}
+	}
+}
+
+func (kv *KVParser) skipToNewline() {
+	for {
+		tok := kv.scan.Scan()
+
+		if tok == '\n' || tok == scanner.EOF {
+			return
+		}
+	}
+}
+
+func NewKVParser(r io.Reader) *KVParser {
+	kv := &KVParser{r: r}
+
+	kv.scan.Init(r)
+	kv.scan.Whitespace = whitespace
+	kv.scan.Mode = tokens
+
+	return kv
+}
+
+func (s *KVParser) Generate() (*Message, error) {
+	scan := &s.scan
+
+restart:
+	tok := scan.Peek()
+
+	if tok != '>' {
+		if s.bare {
+			return s.readBare()
+		}
+
+		tok = s.skipToStart()
+	} else {
+		scan.Next() // consume the >
+	}
+
+	if tok == scanner.EOF {
+		return nil, io.EOF
+	}
+
+	// We're at the start of a message now
+
+	m := Log()
+
+	// Detect a type flag
+	switch scan.Peek() {
+	case '!':
+		scan.Next()
+		m.Type = proto.Uint32(tMetric)
+	case '$':
+		scan.Next()
+		m.Type = proto.Uint32(tTrace)
+	case '*':
+		scan.Next()
+		m.Type = proto.Uint32(tAudit)
+	}
+
+	if scan.Next() != ' ' {
+		goto restart
+	}
+
+	// Detect a predeclared timestamp
+	if scan.Peek() == '@' {
+		scan.Next() // consume the @
+
+		var buf bytes.Buffer
+
+		buf.WriteString("@")
+
+		for {
+			tok := scan.Next()
+
+			if tok == ' ' {
+				ts := tai64n.ParseTAI64NLabel(buf.String())
+
+				if ts != nil {
+					m.Timestamp = ts
+				}
+
+				break
+			} else {
+				buf.WriteString(string(tok))
+			}
+		}
+	}
+
+	if scan.Peek() == '\\' {
+		scan.Next() // consume the \
+
+		var buf bytes.Buffer
+
+		for {
+			tok := scan.Next()
+
+			if tok == ' ' {
+				m.SessionId = proto.String(buf.String())
+				break
+			} else {
+				buf.WriteString(string(tok))
+			}
+		}
+	}
+
+	// Pull out a key=val sequence
+	for {
+		tok = scan.Peek()
+
+		var key string
+
+		if tok == '\n' || tok == scanner.EOF {
+			return m, nil
+		}
+
+		tok = scan.Scan()
+
+		if tok != scanner.Ident {
+			goto bad
+		}
+
+		key = scan.TokenText()
+
+		if scan.Scan() != '=' {
+			goto bad
+		}
+
+		switch scan.Scan() {
+		case ':':
+			st := scan.Scan()
+
+			if st != scanner.Int {
+				goto bad
+			}
+
+			tsec := scan.TokenText()
+
+			st = scan.Scan()
+
+			if st != '.' {
+				goto bad
+			}
+
+			st = scan.Scan()
+
+			if st != scanner.Int {
+				goto bad
+			}
+
+			tssec := scan.TokenText()
+
+			sec, _ := strconv.ParseInt(tsec, 10, 64)
+			subsec, _ := strconv.ParseInt(tssec, 10, 32)
+
+			if len(tssec) <= 9 {
+				subsec *= cToNano[len(tssec)-1]
+			}
+
+			m.AddInterval(key, uint64(sec), uint32(subsec))
+		case scanner.Int:
+			i, err := strconv.ParseInt(scan.TokenText(), 0, 64)
+			if err != nil {
+				goto bad
+			}
+
+			m.AddInt(key, i)
+		case scanner.String, scanner.RawString:
+			s := scan.TokenText()
+
+			m.AddString(key, s[1:len(s)-1])
+		case scanner.Ident, scanner.Float, scanner.Char:
+			m.AddString(key, scan.TokenText())
+
+		default:
+			goto bad
+		}
+
+		continue
+
+	bad:
+		s.skipToNewline()
+
+		break
+	}
+
+	return nil, io.EOF
+}
