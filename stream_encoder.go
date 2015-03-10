@@ -6,8 +6,9 @@ import (
 )
 
 type StreamEncoder struct {
-	w   io.Writer
-	enc *Encoder
+	w       io.Writer
+	enc     *Encoder
+	encoded uint64
 }
 
 func NewStreamEncoder(w io.Writer) *StreamEncoder {
@@ -64,6 +65,13 @@ func (s *StreamEncoder) OpenFile(f *os.File) error {
 }
 
 func (s *StreamEncoder) Receive(m *Message) error {
-	_, err := s.enc.Encode(m)
+	cnt, err := s.enc.Encode(m)
+
+	s.encoded += cnt
+
 	return err
+}
+
+func (s *StreamEncoder) EncodedBytes() uint64 {
+	return s.encoded
 }

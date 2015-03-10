@@ -1,8 +1,6 @@
 package plugin
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,8 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-
-	"code.google.com/p/snappy-go/snappy"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
@@ -25,13 +21,14 @@ type Spool struct {
 	// How many rotate files to keep
 	MaxFiles int
 
-	root    string
-	current string
-	file    *os.File
-	output  io.Writer
-	bytes   int64
+	OnRotate func(string) error
 
-	enc *cypress.Encoder
+	root      string
+	current   string
+	file      *os.File
+	startSize int64
+
+	enc *cypress.StreamEncoder
 }
 
 const PerFileSize = (1024 * 1024) // 1 meg per file
@@ -54,34 +51,18 @@ func (sf *Spool) openCurrent() error {
 		return err
 	}
 
-	sf.bytes = fi.Size()
+	sf.startSize = fi.Size()
 
-	if sf.bytes == 0 {
-		hdr := &cypress.StreamHeader{
-			Compression: cypress.StreamHeader_SNAPPY.Enum(),
-		}
+	enc := cypress.NewStreamEncoder(fd)
 
-		var buf bytes.Buffer
-		buf.WriteString("-")
-
-		data, err := hdr.Marshal()
+	if sf.startSize == 0 {
+		err = enc.Init(cypress.SNAPPY)
 		if err != nil {
 			return err
 		}
-
-		szbuf := make([]byte, 10)
-
-		cnt := binary.PutUvarint(szbuf, uint64(len(data)))
-
-		buf.Write(szbuf[:cnt])
-		buf.Write(data)
-
-		sf.file.Write(buf.Bytes())
 	}
 
-	sf.output = snappy.NewWriter(sf.file)
-
-	sf.enc = cypress.NewEncoder(sf.output)
+	sf.enc = enc
 
 	return nil
 }
@@ -92,13 +73,18 @@ func NewSpool(root string) (*Spool, error) {
 		MaxFiles:    MaxFiles,
 	}
 
+	err := os.MkdirAll(root, 0755)
+	if err != nil {
+		return nil, err
+	}
+
 	sf.root = root
 
 	sf.pruneOldFiles()
 
 	sf.current = path.Join(root, "current")
 
-	err := sf.openCurrent()
+	err = sf.openCurrent()
 
 	if err != nil {
 		return nil, err
@@ -109,6 +95,10 @@ func NewSpool(root string) (*Spool, error) {
 
 func (sf *Spool) newFilename() string {
 	return path.Join(sf.root, tai64n.Now().Label())
+}
+
+func (sf *Spool) CurrentFile() string {
+	return path.Join(sf.root, "current")
 }
 
 func (sf *Spool) pruneOldFiles() {
@@ -155,17 +145,15 @@ func (sf *Spool) pruneOldFiles() {
 }
 
 func (sf *Spool) Receive(m *cypress.Message) error {
-	cnt, err := sf.enc.Encode(m)
+	err := sf.enc.Receive(m)
 	if err != nil {
 		return err
 	}
 
 	sf.file.Sync()
 
-	sf.bytes += int64(cnt)
-
-	if sf.bytes >= sf.PerFileSize {
-		err := sf.rotate()
+	if uint64(sf.startSize)+sf.enc.EncodedBytes() >= uint64(sf.PerFileSize) {
+		err := sf.Rotate()
 		if err != nil {
 			return err
 		}
@@ -174,9 +162,15 @@ func (sf *Spool) Receive(m *cypress.Message) error {
 	return nil
 }
 
-func (sf *Spool) rotate() error {
+func (sf *Spool) Rotate() error {
 	sf.file.Close()
-	os.Rename(sf.current, sf.newFilename())
+
+	newName := sf.newFilename()
+	os.Rename(sf.current, newName)
+
+	if sf.OnRotate != nil {
+		sf.OnRotate(newName)
+	}
 
 	sf.pruneOldFiles()
 

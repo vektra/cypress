@@ -90,7 +90,7 @@ func TestSpool(t *testing.T) {
 		err := sf.Receive(m)
 		require.NoError(t, err)
 
-		err = sf.rotate()
+		err = sf.Rotate()
 		require.NoError(t, err)
 
 		cm := cypress.Log()
