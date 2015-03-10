@@ -10,10 +10,6 @@ type Receiver interface {
 	Receive(msg *Message) error
 }
 
-type WireReceiver interface {
-	ReceiveWire(msg *WireMessage) error
-}
-
 type Generator interface {
 	Generate() (*Message, error)
 	Close() error
