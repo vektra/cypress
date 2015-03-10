@@ -4,7 +4,6 @@ import "io"
 
 type Probe struct {
 	r   io.Reader
-	buf []byte
 	hdr StreamHeader
 
 	Stream io.Reader
@@ -13,19 +12,24 @@ type Probe struct {
 func NewProbe(r io.Reader) *Probe {
 	return &Probe{
 		r:      r,
-		buf:    make([]byte, 128),
 		Stream: r,
 	}
 }
 
 func (p *Probe) Probe() error {
-	_, err := p.r.Read(p.buf[:1])
+	buf := pbBufPool.Get().([]byte)
+
+	_, err := p.r.Read(buf[:1])
 	if err != nil {
+		pbBufPool.Put(buf)
 		return err
 	}
 
-	if p.buf[0] != '-' {
-		p.Stream = &bytePeekReader{b: p.buf[0], r: p.Stream}
+	b := buf[0]
+	pbBufPool.Put(buf)
+
+	if b != '-' {
+		p.Stream = &bytePeekReader{b: b, r: p.Stream}
 		return nil
 	}
 

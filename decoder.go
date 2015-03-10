@@ -10,8 +10,7 @@ import (
 type typeDecoder func(d *Decoder) (*Message, error)
 
 type Decoder struct {
-	r   *bufio.Reader
-	buf []byte
+	r *bufio.Reader
 
 	decoder typeDecoder
 
@@ -21,8 +20,7 @@ type Decoder struct {
 
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
-		r:   bufio.NewReader(r),
-		buf: make([]byte, 1024),
+		r: bufio.NewReader(r),
 	}
 }
 
@@ -79,20 +77,26 @@ func decodeNative(d *Decoder) (*Message, error) {
 		return nil, err
 	}
 
-	if uint64(len(d.buf)) < dataLen {
-		d.buf = make([]byte, dataLen)
+	buf := pbBufPool.Get().([]byte)
+
+	if uint64(len(buf)) < dataLen {
+		buf = make([]byte, dataLen)
 	}
 
-	buf := d.buf[:dataLen]
+	sbuf := buf[:dataLen]
 
-	_, err = io.ReadFull(d.r, buf)
+	_, err = io.ReadFull(d.r, sbuf)
 	if err != nil {
+		pbBufPool.Put(buf)
 		return nil, err
 	}
 
 	m := &Message{}
 
-	err = m.Unmarshal(buf)
+	err = m.Unmarshal(sbuf)
+
+	pbBufPool.Put(buf)
+
 	if err != nil {
 		return nil, err
 	}

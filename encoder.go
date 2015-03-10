@@ -6,39 +6,44 @@ import (
 )
 
 type Encoder struct {
-	w   io.Writer
-	buf []byte
+	w io.Writer
 }
 
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
-		w:   w,
-		buf: make([]byte, 1024),
+		w: w,
 	}
 }
 
 func (e *Encoder) Encode(m *Message) (uint64, error) {
 	sz := m.Size()
 
-	e.buf[0] = '+'
+	buf := pbBufPool.Get().([]byte)
 
-	cnt := binary.PutUvarint(e.buf[1:], uint64(sz))
+	buf[0] = '+'
 
-	_, err := e.w.Write(e.buf[:cnt+1])
+	cnt := binary.PutUvarint(buf[1:], uint64(sz))
+
+	_, err := e.w.Write(buf[:cnt+1])
 	if err != nil {
+		pbBufPool.Put(buf)
 		return 0, err
 	}
 
-	if len(e.buf) < sz {
-		e.buf = make([]byte, sz)
+	if len(buf) < sz {
+		buf = make([]byte, sz)
 	}
 
-	cnt, err = m.MarshalTo(e.buf)
+	cnt, err = m.MarshalTo(buf)
 	if err != nil {
+		pbBufPool.Put(buf)
 		return 0, err
 	}
 
-	_, err = e.w.Write(e.buf[:cnt])
+	_, err = e.w.Write(buf[:cnt])
+
+	pbBufPool.Put(buf)
+
 	if err != nil {
 		return 0, err
 	}

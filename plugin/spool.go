@@ -30,9 +30,6 @@ type Spool struct {
 	file    *os.File
 	output  io.Writer
 	bytes   int64
-	buf     []byte
-
-	feeder chan *cypress.Message
 
 	enc *cypress.Encoder
 }
@@ -83,8 +80,6 @@ func (sf *Spool) openCurrent() error {
 	}
 
 	sf.output = snappy.NewWriter(sf.file)
-
-	sf.buf = make([]byte, 1024)
 
 	sf.enc = cypress.NewEncoder(sf.output)
 

@@ -1,25 +1,13 @@
 package cypress
 
-import (
-	"io"
-	"sync"
-)
-
-var headerBufPool sync.Pool
+import "io"
 
 func (h *StreamHeader) UnmarshalFrom(r io.Reader) error {
-	var buf []byte
-
-	val := headerBufPool.Get()
-	if val == nil {
-		buf = make([]byte, 128)
-	} else {
-		buf = val.([]byte)
-	}
+	buf := pbBufPool.Get().([]byte)
 
 	size, err := ReadUvarint(r, buf)
 	if err != nil {
-		headerBufPool.Put(buf)
+		pbBufPool.Put(buf)
 		return err
 	}
 
@@ -29,12 +17,12 @@ func (h *StreamHeader) UnmarshalFrom(r io.Reader) error {
 
 	_, err = io.ReadFull(r, buf[:size])
 	if err != nil {
-		headerBufPool.Put(buf)
+		pbBufPool.Put(buf)
 		return err
 	}
 
 	err = h.Unmarshal(buf[:size])
-	headerBufPool.Put(buf)
+	pbBufPool.Put(buf)
 
 	return err
 }
