@@ -128,6 +128,8 @@ func (s *S3) onRotate(name string) error {
 
 var (
 	ErrCorruptSignature = errors.New("corrupt signature")
+	ErrMissingSignature = errors.New("missing signature")
+	ErrMissingETag      = errors.New("missing ETag to verify")
 	ErrInvalidSignature = errors.New("invalid signature")
 )
 
@@ -150,7 +152,7 @@ func (sig *S3Signature) ValidateETag(resp *http.Response) error {
 
 	etag := resp.Header.Get("ETag")
 	if etag == "" {
-		return ErrInvalidSignature
+		return ErrMissingETag
 	}
 
 	sum, err := hex.DecodeString(etag)
@@ -188,6 +190,9 @@ func (s3 *S3) Rotate() error {
 
 type S3Generator struct {
 	Keys keystore.Keys
+
+	// Indicates if we should process any unsigned logs seen
+	AllowUnsigned bool
 
 	client *s3.S3
 	bucket *s3.Bucket
@@ -227,7 +232,11 @@ func (gen *S3Generator) extractSignature(resp *http.Response) (*S3Signature, err
 
 	data := resp.Header.Get(SignatureHeader)
 	if data == "" {
-		return &sig, nil
+		if gen.AllowUnsigned {
+			return &sig, nil
+		}
+
+		return nil, ErrMissingSignature
 	}
 
 	bytes, err := base64.StdEncoding.DecodeString(data)

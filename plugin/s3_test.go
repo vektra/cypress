@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -126,6 +127,8 @@ func TestS3(t *testing.T) {
 		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
 		require.NoError(t, err)
 
+		gen.AllowUnsigned = true
+
 		m2, err := gen.Generate()
 		require.NoError(t, err)
 
@@ -193,6 +196,8 @@ func TestS3(t *testing.T) {
 		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
 		require.NoError(t, err)
 
+		gen.AllowUnsigned = true
+
 		assert.Equal(t, 2, len(gen.List().Contents))
 
 		m2, err := gen.Generate()
@@ -227,6 +232,8 @@ func TestS3(t *testing.T) {
 
 		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
 		require.NoError(t, err)
+
+		gen.AllowUnsigned = true
 
 		gen.listMax = 1
 		gen.list = nil
@@ -275,6 +282,97 @@ func TestS3(t *testing.T) {
 
 		signature := gen.LastSignature()
 		assert.True(t, signature.KeyID != "")
+	})
+
+	n.It("returns an error if the logs have no signature", func() {
+		var tk keystore.TestKeys
+
+		s3a.Keys = &tk
+		s3a.SignWith(tk.Gen())
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		name := s3a.LastFile()
+
+		var buf bytes.Buffer
+
+		enc := cypress.NewStreamEncoder(&buf)
+
+		err = enc.Init(cypress.SNAPPY)
+		require.NoError(t, err)
+
+		m.Add("host", "foobar")
+
+		err = enc.Receive(m)
+		require.NoError(t, err)
+
+		err = s3c.Bucket(bucketName).Put(name, buf.Bytes(), "application/binary", s3.Private, s3.Options{})
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		gen.Keys = &tk
+
+		_, err = gen.Generate()
+		require.Error(t, err)
+	})
+
+	n.It("returns an error if the signature doesn't validate", func() {
+		var tk keystore.TestKeys
+
+		s3a.Keys = &tk
+		s3a.SignWith(tk.Gen())
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		name := s3a.LastFile()
+
+		var buf bytes.Buffer
+
+		enc := cypress.NewStreamEncoder(&buf)
+
+		err = enc.Init(cypress.SNAPPY)
+		require.NoError(t, err)
+
+		m.Add("host", "foobar")
+
+		err = enc.Receive(m)
+		require.NoError(t, err)
+
+		resp, err := s3c.Bucket(bucketName).GetResponse(name)
+		require.NoError(t, err)
+
+		options := s3.Options{
+			Meta: map[string][]string{
+				SignatureHeaderKey: []string{resp.Header.Get(SignatureHeader)},
+			},
+		}
+
+		err = s3c.Bucket(bucketName).Put(name, buf.Bytes(), "application/binary", s3.Private, options)
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		gen.Keys = &tk
+
+		_, err = gen.Generate()
+		require.Error(t, err)
 	})
 
 	n.Meow()
