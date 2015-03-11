@@ -18,5 +18,8 @@ func init() {
 		"inject": func() (cli.Command, error) {
 			return &InjectCommand{Ui: ui}, nil
 		},
+		"keys": func() (cli.Command, error) {
+			return &KeysCommand{Ui: ui}, nil
+		},
 	}
 }
