@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/keystore"
 	"github.com/vektra/neko"
 )
 
@@ -131,6 +132,45 @@ func TestS3(t *testing.T) {
 		assert.Equal(t, m, m2)
 	})
 
+	n.It("can sign the data when it's uploaded", func() {
+		var tk keystore.TestKeys
+
+		s3a.Keys = &tk
+		s3a.SignWith(tk.Gen())
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		fileData, err := ioutil.ReadFile(s3a.CurrentFile())
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		bucket := s3c.Bucket(bucketName)
+
+		resp, err := bucket.GetResponse(s3a.LastFile())
+		require.NoError(t, err)
+
+		var gen S3Generator
+		gen.Keys = &tk
+
+		signature, err := gen.extractSignature(resp)
+		require.NoError(t, err)
+
+		data, err := bucket.Get(s3a.LastFile())
+		require.NoError(t, err)
+
+		assert.True(t, signature.KeyID != "")
+
+		assert.NoError(t, signature.ValidateETag(resp))
+
+		assert.Equal(t, string(fileData), string(data))
+	})
+
 	n.It("reads logs from s3 files in time order", func() {
 		m := cypress.Log()
 		m.Add("source", "old")
@@ -153,7 +193,7 @@ func TestS3(t *testing.T) {
 		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
 		require.NoError(t, err)
 
-		assert.Equal(t, 2, len(gen.Files()))
+		assert.Equal(t, 2, len(gen.List().Contents))
 
 		m2, err := gen.Generate()
 		require.NoError(t, err)
@@ -164,6 +204,77 @@ func TestS3(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, cm, m3)
+	})
+
+	n.It("reads logs from s3 files in multiple batches", func() {
+		m := cypress.Log()
+		m.Add("source", "old")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		cm := cypress.Log()
+		cm.Add("source", "current")
+
+		err = s3a.Receive(cm)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		gen.listMax = 1
+		gen.list = nil
+		gen.marker = ""
+
+		err = gen.updateList()
+		require.NoError(t, err)
+
+		assert.Equal(t, 1, len(gen.List().Contents))
+
+		m2, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+
+		m3, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, cm, m3)
+	})
+
+	n.It("can verify logs when read back", func() {
+		var tk keystore.TestKeys
+
+		s3a.Keys = &tk
+		s3a.SignWith(tk.Gen())
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Rotate()
+		require.NoError(t, err)
+
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		gen.Keys = &tk
+
+		m2, err := gen.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+
+		signature := gen.LastSignature()
+		assert.True(t, signature.KeyID != "")
 	})
 
 	n.Meow()
