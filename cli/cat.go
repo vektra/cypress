@@ -1,77 +1,37 @@
 package cli
 
 import (
-	"flag"
+	"fmt"
 	"io"
 	"os"
-	"strings"
 
-	"github.com/mitchellh/cli"
 	"github.com/vektra/cypress/commands"
 	"github.com/vektra/cypress/plugin"
 )
 
 type CatCommand struct {
-	Ui cli.Ui
-
-	kv     bool
-	human  bool
-	json   bool
-	native bool
+	Kv     bool `short:"k" description:"display in key=value format"`
+	Human  bool `short:"H" description:"display in easy to read format"`
+	Json   bool `short:"j" description:"display in json"`
+	Native bool `short:"n" description:"output as native binary"`
 }
 
-func (c *CatCommand) Synopsis() string {
-	return "print out message"
-}
-
-func (c *CatCommand) Help() string {
-	helptext := `
-Usage: cypress cat [options]
-
-  Read from a message source and print out messages within that
-	source.
-
-Options:
-
-  -kv      Display messages in native text (kv, or key-value) format
-  -human   Display messages in an easy to read format
-	-json    Display messages in JSON
-	-native  Output messages as binary in native format. This is mostly
-	         useful for pulling messages out of a source and piping
-					 them through cypress to something else, like grep.
-	`
-
-	return strings.TrimSpace(helptext)
-}
-
-func (c *CatCommand) Run(args []string) int {
-	cmdFlags := flag.NewFlagSet("cat", flag.ContinueOnError)
-	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
-	cmdFlags.BoolVar(&c.kv, "kv", false, "")
-	cmdFlags.BoolVar(&c.human, "human", false, "")
-	cmdFlags.BoolVar(&c.json, "json", false, "")
-	cmdFlags.BoolVar(&c.native, "native", false, "")
-
-	err := cmdFlags.Parse(args)
-	if err != nil {
-		return 1
-	}
-
+func (c *CatCommand) Execute(args []string) error {
 	var cnt int
 
-	if c.kv {
+	if c.Kv {
 		cnt++
 	}
 
-	if c.human {
+	if c.Human {
 		cnt++
 	}
 
-	if c.json {
+	if c.Json {
 		cnt++
 	}
 
-	if c.native {
+	if c.Native {
 		cnt++
 	}
 
@@ -81,44 +41,51 @@ func (c *CatCommand) Run(args []string) int {
 	case cnt == 0:
 		format = commands.KV
 	case cnt > 1:
-		return 1
-	case c.kv:
+		return fmt.Errorf("multiple display types requested, only use one")
+	case c.Kv:
 		format = commands.KV
-	case c.human:
+	case c.Human:
 		format = commands.HUMAN
-	case c.json:
+	case c.Json:
 		format = commands.JSON
-	case c.native:
+	case c.Native:
 		format = commands.NATIVE
 	}
 
-	dir := cmdFlags.Arg(0)
+	dir := args[0]
 	if dir == "" {
-		return 1
+		return fmt.Errorf("no source specified")
 	}
 
 	spool, err := plugin.NewSpool(dir)
 	if err != nil {
-		return 1
+		return err
 	}
 
 	gen, err := spool.Generator()
 	if err != nil {
-		return 1
+		return err
 	}
 
 	cat, err := commands.NewCat(os.Stdout, gen, format)
 	if err != nil {
-		return 1
+		return err
 	}
 
 	err = cat.Run()
 	if err != nil {
 		if err == io.EOF {
-			return 0
+			return nil
 		}
-		return 1
+
+		return err
 	}
 
-	return 0
+	return nil
+}
+
+func init() {
+	long := `Given a source of messages, the cat command will read those messages in and print them out. Commonly, users point cat at a spool directory to read the message contained within.`
+
+	addCommand("cat", "display messages", long, &CatCommand{})
 }

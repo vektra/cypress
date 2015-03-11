@@ -6,11 +6,11 @@ import (
 	"crypto/rand"
 )
 
-func GenerateKey(path string) error {
+func GenerateKey(path, name string) error {
 	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return err
 	}
 
-	return SavePrivatePEM(path, key)
+	return SaveNamedPrivatePEM(path, name, key)
 }

@@ -2,66 +2,46 @@ package cli
 
 import (
 	"crypto/ecdsa"
-	"flag"
 	"fmt"
-	"log"
 
-	"github.com/mitchellh/cli"
 	"github.com/vektra/cypress/keystore"
 )
 
-type KeysCommand struct {
-	Ui cli.Ui
+type KeyGen struct {
+	Name string `short:"n" long:"name" description:"Canonical name to include in the key"`
 
-	gen   string
-	check string
+	Output string `short:"o" long:"output" description:"Where to write the key"	required:"true"`
 }
 
-func (k *KeysCommand) Synopsis() string {
-	return "generate and manipulate keys"
+func (k *KeyGen) Execute(args []string) error {
+	return keystore.GenerateKey(k.Output, k.Name)
 }
 
-func (k *KeysCommand) Help() string {
-	return "get some help"
+type KeyCheck struct {
+	Args struct {
+		File string
+	} `positional-args:"yes" required:"true"`
 }
 
-func (k *KeysCommand) Run(args []string) int {
-	cmdFlags := flag.NewFlagSet("keys", flag.ContinueOnError)
-	cmdFlags.StringVar(&k.gen, "gen", "", "")
-	cmdFlags.StringVar(&k.check, "check", "", "")
-
-	err := cmdFlags.Parse(args)
+func (k *KeyCheck) Execute(args []string) error {
+	val, _, err := keystore.LoadPEM(k.Args.File)
 	if err != nil {
-		return 1
+		return err
 	}
 
-	if k.gen != "" {
-		err = keystore.GenerateKey(k.gen)
-		if err != nil {
-			return 1
-		}
-
-		return 0
+	switch key := val.(type) {
+	case *ecdsa.PrivateKey:
+		fmt.Printf("private key, %d bits\n", key.Params().BitSize)
+	case *ecdsa.PublicKey:
+		fmt.Printf("public key, %d bits\n", key.Params().BitSize)
+	default:
+		return fmt.Errorf("Unknown key type: %T\n", val)
 	}
 
-	if k.check != "" {
-		val, _, err := keystore.LoadPEM(k.check)
-		if err != nil {
-			log.Print(err)
-			return 1
-		}
+	return nil
+}
 
-		switch key := val.(type) {
-		case *ecdsa.PrivateKey:
-			fmt.Printf("private key, %d bits\n", key.Params().BitSize)
-		case *ecdsa.PublicKey:
-			fmt.Printf("public key, %d bits\n", key.Params().BitSize)
-		default:
-			fmt.Printf("Unknown key type: %T\n", val)
-		}
-
-		return 0
-	}
-
-	return 1
+func init() {
+	addCommand("key:gen", "generate a new crypto key", "", &KeyGen{})
+	addCommand("key:check", "inspect a crypto key", "", &KeyCheck{})
 }

@@ -1,21 +1,39 @@
 package cli
 
-import (
-	"log"
-	"os"
+import "fmt"
 
-	"github.com/mitchellh/cli"
+import (
+	"sync"
+
+	"github.com/jessevdk/go-flags"
 )
 
-func Run(args []string) int {
-	c := cli.NewCLI("app", "0.2.0")
-	c.Args = os.Args[1:]
-	c.Commands = Commands
+var (
+	globalParser      *flags.Parser
+	globalParserSetup sync.Once
+)
 
-	status, err := c.Run()
+func parser() *flags.Parser {
+	globalParserSetup.Do(func() {
+		globalParser = flags.NewNamedParser("cypress", flags.Default)
+	})
+
+	return globalParser
+}
+
+func addCommand(name, short, long string, cmd interface{}) {
+	_, err := parser().AddCommand(name, short, long, cmd)
 	if err != nil {
-		log.Println(err)
+		panic(err)
+	}
+}
+
+func Run(args []string) int {
+	_, err := parser().Parse()
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return 1
 	}
 
-	return status
+	return 0
 }

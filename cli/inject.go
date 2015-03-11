@@ -1,29 +1,23 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/mitchellh/cli"
 	"github.com/vektra/cypress/commands"
 	"github.com/vektra/cypress/plugin"
 )
 
 type InjectCommand struct {
-	Ui cli.Ui
+	Args struct {
+		Target string `short:"s" positional-arg-name:"target" description:"where to write the messages to"`
+	} `positional-args:"true"`
 }
 
-func (i *InjectCommand) Synopsis() string {
-	return "inject messages"
-}
-
-func (i *InjectCommand) Help() string {
-	return "inject messages"
-}
-
-func (i *InjectCommand) Run(args []string) int {
-	dir := args[0]
+func (i *InjectCommand) Execute(args []string) error {
+	dir := i.Args.Target
 	if dir == "" {
-		return 1
+		return fmt.Errorf("no target specified")
 	}
 
 	if _, err := os.Stat(dir); err != nil {
@@ -32,18 +26,17 @@ func (i *InjectCommand) Run(args []string) int {
 
 	spool, err := plugin.NewSpool(dir)
 	if err != nil {
-		return 1
+		return err
 	}
 
 	inj, err := commands.NewInject(os.Stdin, spool)
 	if err != nil {
-		return 1
+		return err
 	}
 
-	err = inj.Run()
-	if err != nil {
-		return 1
-	}
+	return inj.Run()
+}
 
-	return 0
+func init() {
+	addCommand("inject", "inject messages", "", &InjectCommand{})
 }
