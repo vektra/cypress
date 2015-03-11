@@ -7,7 +7,8 @@ import (
 import "crypto/elliptic"
 
 type TestKeys struct {
-	Key *ecdsa.PrivateKey
+	Name string
+	Key  *ecdsa.PrivateKey
 }
 
 func (t *TestKeys) Gen() *ecdsa.PrivateKey {
@@ -22,5 +23,17 @@ func (t *TestKeys) Gen() *ecdsa.PrivateKey {
 }
 
 func (t *TestKeys) Get(name string) (*ecdsa.PublicKey, error) {
+	if t.Name != "" && t.Name != name {
+		return nil, ErrUnknownKey
+	}
+
 	return &t.Key.PublicKey, nil
+}
+
+func (t *TestKeys) GetPrivate(name string) (*ecdsa.PrivateKey, error) {
+	if t.Name != "" && t.Name != name {
+		return nil, ErrUnknownKey
+	}
+
+	return t.Key, nil
 }

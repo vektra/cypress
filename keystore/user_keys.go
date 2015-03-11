@@ -82,3 +82,25 @@ func (u *UserKeys) Get(name string) (*ecdsa.PublicKey, error) {
 
 	return nil, ErrUnknownKey
 }
+
+func (u *UserKeys) GetPrivate(name string) (*ecdsa.PrivateKey, error) {
+	if u.explicitDir != nil {
+		return u.explicitDir.GetPrivate(name)
+	}
+
+	if u.userDir != nil {
+		key, err := u.userDir.GetPrivate(name)
+		if err == nil {
+			return key, nil
+		}
+	}
+
+	for _, dir := range u.globalDirs {
+		key, err := dir.GetPrivate(name)
+		if err == nil {
+			return key, nil
+		}
+	}
+
+	return nil, ErrUnknownKey
+}

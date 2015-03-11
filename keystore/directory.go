@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Directory struct {
@@ -53,9 +54,15 @@ func (d *Directory) loadKeys() error {
 	}
 
 	for _, ent := range ents {
-		val, err := LoadPEM(filepath.Join(d.dir, ent.Name()))
+		val, blk, err := LoadPEM(filepath.Join(d.dir, ent.Name()))
 		if err != nil {
 			return err
+		}
+
+		alias := filepath.Base(ent.Name())
+
+		if strings.HasSuffix(alias, ".pem") {
+			alias = alias[:len(alias)-4]
 		}
 
 		switch key := val.(type) {
@@ -64,10 +71,23 @@ func (d *Directory) loadKeys() error {
 
 			d.publicKeys[keyid] = &key.PublicKey
 			d.privateKeys[keyid] = key
+			d.publicKeys[alias] = &key.PublicKey
+			d.privateKeys[alias] = key
+
+			if cname, ok := blk.Headers[NameHeader]; ok {
+				d.publicKeys[cname] = &key.PublicKey
+				d.privateKeys[cname] = key
+			}
+
 		case *ecdsa.PublicKey:
 			keyid := KeyId(key)
 
 			d.publicKeys[keyid] = key
+			d.publicKeys[alias] = key
+
+			if cname, ok := blk.Headers[NameHeader]; ok {
+				d.publicKeys[cname] = key
+			}
 		default:
 			return ErrUnknownKeyType
 		}
@@ -78,6 +98,14 @@ func (d *Directory) loadKeys() error {
 
 func (d *Directory) Get(id string) (*ecdsa.PublicKey, error) {
 	if key, ok := d.publicKeys[id]; ok {
+		return key, nil
+	}
+
+	return nil, ErrUnknownKey
+}
+
+func (d *Directory) GetPrivate(id string) (*ecdsa.PrivateKey, error) {
+	if key, ok := d.privateKeys[id]; ok {
 		return key, nil
 	}
 

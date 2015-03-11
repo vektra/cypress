@@ -45,7 +45,7 @@ func (k *KeysCommand) Run(args []string) int {
 	}
 
 	if k.check != "" {
-		val, err := keystore.LoadPEM(k.check)
+		val, _, err := keystore.LoadPEM(k.check)
 		if err != nil {
 			log.Print(err)
 			return 1

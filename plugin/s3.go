@@ -22,8 +22,7 @@ import (
 )
 
 type S3 struct {
-	ACL  s3.ACL
-	Keys keystore.Keys
+	ACL s3.ACL
 
 	client   *s3.S3
 	bucket   *s3.Bucket
@@ -44,10 +43,14 @@ func NewS3(dir, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S
 
 	s3 := &S3{
 		ACL:    acl,
-		Keys:   keystore.Default(),
 		client: client,
 		bucket: client.Bucket(bucket),
 		spool:  spool,
+	}
+
+	err = s3.setupKey()
+	if err != nil {
+		return nil, err
 	}
 
 	spool.OnRotate = s3.onRotate
@@ -65,9 +68,30 @@ func NewS3WithSpool(spool *Spool, bucket string, acl s3.ACL, auth aws.Auth, regi
 		spool:  spool,
 	}
 
+	err := s3.setupKey()
+	if err != nil {
+		return nil, err
+	}
+
 	spool.OnRotate = s3.onRotate
 
 	return s3, nil
+}
+
+func (s *S3) setupKey() error {
+	name := cypress.GlobalConfig().S3.SignKey
+	if name == "" {
+		return nil
+	}
+
+	key, err := keystore.Default().GetPrivate(name)
+	if err != nil {
+		return err
+	}
+
+	s.signKey = key
+
+	return nil
 }
 
 func (s *S3) SignWith(k *ecdsa.PrivateKey) {

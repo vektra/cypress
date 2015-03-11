@@ -79,5 +79,53 @@ func TestDirectory(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	n.It("can find keys referenced by file name", func() {
+		key, err := ecdsa.GenerateKey(Curve, rand.Reader)
+		require.NoError(t, err)
+
+		err = SavePrivatePEM(filepath.Join(keydir, "test.pem"), key)
+		require.NoError(t, err)
+
+		dir, err := NewDirectory(keydir)
+		require.NoError(t, err)
+
+		out, err := dir.Get("test")
+		require.NoError(t, err)
+
+		assert.Equal(t, &key.PublicKey, out)
+	})
+
+	n.It("can find keys referenced by pem header name (private)", func() {
+		key, err := ecdsa.GenerateKey(Curve, rand.Reader)
+		require.NoError(t, err)
+
+		err = SaveNamedPrivatePEM(filepath.Join(keydir, "test.pem"), "foo", key)
+		require.NoError(t, err)
+
+		dir, err := NewDirectory(keydir)
+		require.NoError(t, err)
+
+		out, err := dir.Get("foo")
+		require.NoError(t, err)
+
+		assert.Equal(t, &key.PublicKey, out)
+	})
+
+	n.It("can find keys referenced by pem header name (public)", func() {
+		key, err := ecdsa.GenerateKey(Curve, rand.Reader)
+		require.NoError(t, err)
+
+		err = SaveNamedPublicPEM(filepath.Join(keydir, "test.pem"), "foo", &key.PublicKey)
+		require.NoError(t, err)
+
+		dir, err := NewDirectory(keydir)
+		require.NoError(t, err)
+
+		out, err := dir.Get("foo")
+		require.NoError(t, err)
+
+		assert.Equal(t, &key.PublicKey, out)
+	})
+
 	n.Meow()
 }

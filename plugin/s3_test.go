@@ -28,6 +28,8 @@ func TestS3(t *testing.T) {
 		awsRegion aws.Region
 	)
 
+	cypress.EmptyGlobalConfig = true
+
 	bucketName := "test-logs"
 
 	tmpdir, err := ioutil.TempDir("", "s3-cypress")
@@ -36,6 +38,9 @@ func TestS3(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 
 	spooldir := filepath.Join(tmpdir, "spool")
+
+	s3cfg := cypress.GlobalConfig().S3
+	defKeys := keystore.Default()
 
 	n.Setup(func() {
 		var err error
@@ -59,6 +64,9 @@ func TestS3(t *testing.T) {
 	})
 
 	n.Cleanup(func() {
+		cypress.GlobalConfig().S3 = s3cfg
+		keystore.SetDefault(defKeys)
+
 		os.RemoveAll(spooldir)
 		s3s.Quit()
 	})
@@ -138,7 +146,6 @@ func TestS3(t *testing.T) {
 	n.It("can sign the data when it's uploaded", func() {
 		var tk keystore.TestKeys
 
-		s3a.Keys = &tk
 		s3a.SignWith(tk.Gen())
 
 		m := cypress.Log()
@@ -172,6 +179,23 @@ func TestS3(t *testing.T) {
 		assert.NoError(t, signature.ValidateETag(resp))
 
 		assert.Equal(t, string(fileData), string(data))
+	})
+
+	n.It("automatically uses a key specified in the global config", func() {
+		cypress.GlobalConfig().S3.SignKey = "foo"
+
+		tk := &keystore.TestKeys{
+			Name: "foo",
+		}
+
+		keystore.SetDefault(tk)
+
+		key := tk.Gen()
+
+		s3a, err = NewS3(spooldir, bucketName, s3.Private, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		assert.Equal(t, key, s3a.signKey)
 	})
 
 	n.It("reads logs from s3 files in time order", func() {
@@ -258,7 +282,6 @@ func TestS3(t *testing.T) {
 	n.It("can verify logs when read back", func() {
 		var tk keystore.TestKeys
 
-		s3a.Keys = &tk
 		s3a.SignWith(tk.Gen())
 
 		m := cypress.Log()
@@ -287,7 +310,6 @@ func TestS3(t *testing.T) {
 	n.It("returns an error if the logs have no signature", func() {
 		var tk keystore.TestKeys
 
-		s3a.Keys = &tk
 		s3a.SignWith(tk.Gen())
 
 		m := cypress.Log()
@@ -328,7 +350,6 @@ func TestS3(t *testing.T) {
 	n.It("returns an error if the signature doesn't validate", func() {
 		var tk keystore.TestKeys
 
-		s3a.Keys = &tk
 		s3a.SignWith(tk.Gen())
 
 		m := cypress.Log()

@@ -21,9 +21,15 @@ var UserConfigPath = ".cypress/config"
 
 var globalConfigLoaded sync.Once
 
+var EmptyGlobalConfig bool
+
 func GlobalConfig() *Config {
 	globalConfigLoaded.Do(func() {
-		globalConfig = loadGlobalConfig()
+		if EmptyGlobalConfig {
+			globalConfig = &Config{}
+		} else {
+			globalConfig = loadGlobalConfig()
+		}
 	})
 
 	return globalConfig

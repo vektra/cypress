@@ -12,10 +12,10 @@ import (
 
 var ErrInvalidPermissions = errors.New("key has too wide of permissions")
 
-func LoadPEM(path string) (interface{}, error) {
+func LoadPEM(path string) (interface{}, *pem.Block, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	blk, _ := pem.Decode(data)
@@ -24,19 +24,19 @@ func LoadPEM(path string) (interface{}, error) {
 	case PEMPrivateKey:
 		stat, err := os.Stat(path)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if stat.Mode().Perm()&0077 != 0 {
-			return nil, ErrInvalidPermissions
+			return nil, nil, ErrInvalidPermissions
 		}
 
 		key, err := x509.ParseECPrivateKey(blk.Bytes)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return key, nil
+		return key, blk, nil
 	case PEMPublicKey:
 		x, y := elliptic.Unmarshal(Curve, blk.Bytes)
 
@@ -46,13 +46,19 @@ func LoadPEM(path string) (interface{}, error) {
 			Y:     y,
 		}
 
-		return key, nil
+		return key, blk, nil
 	default:
-		return nil, ErrUnknownKeyType
+		return nil, nil, ErrUnknownKeyType
 	}
 }
 
 func SavePrivatePEM(path string, key *ecdsa.PrivateKey) error {
+	return SaveNamedPrivatePEM(path, "", key)
+}
+
+const NameHeader = "Canonical-Name"
+
+func SaveNamedPrivatePEM(path, name string, key *ecdsa.PrivateKey) error {
 	bytes, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return err
@@ -61,6 +67,12 @@ func SavePrivatePEM(path string, key *ecdsa.PrivateKey) error {
 	pb := &pem.Block{
 		Type:  PEMPrivateKey,
 		Bytes: bytes,
+	}
+
+	if name != "" {
+		pb.Headers = map[string]string{
+			NameHeader: name,
+		}
 	}
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
@@ -77,11 +89,21 @@ func SavePrivatePEM(path string, key *ecdsa.PrivateKey) error {
 }
 
 func SavePublicPEM(path string, key *ecdsa.PublicKey) error {
+	return SaveNamedPublicPEM(path, "", key)
+}
+
+func SaveNamedPublicPEM(path, name string, key *ecdsa.PublicKey) error {
 	bytes := elliptic.Marshal(key.Curve, key.X, key.Y)
 
 	pb := &pem.Block{
 		Type:  PEMPublicKey,
 		Bytes: bytes,
+	}
+
+	if name != "" {
+		pb.Headers = map[string]string{
+			NameHeader: name,
+		}
 	}
 
 	f, err := os.Create(path)

@@ -10,6 +10,7 @@ import (
 type Config struct {
 	S3 struct {
 		AllowUnsigned bool
+		SignKey       string
 	}
 }
 
