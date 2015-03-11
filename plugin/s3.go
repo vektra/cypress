@@ -213,10 +213,11 @@ func NewS3Generator(bucket string, auth aws.Auth, region aws.Region) (*S3Generat
 	client := s3.New(auth, region)
 
 	gen := &S3Generator{
-		client:  client,
-		bucket:  client.Bucket(bucket),
-		cur:     -1,
-		listMax: 100,
+		AllowUnsigned: cypress.GlobalConfig().S3.AllowUnsigned,
+		client:        client,
+		bucket:        client.Bucket(bucket),
+		cur:           -1,
+		listMax:       100,
 	}
 
 	err := gen.updateList()
