@@ -304,6 +304,19 @@ func (g *S3Generator) LastSignature() *S3Signature {
 	return g.signature
 }
 
+// This is used because objects can now have a GLACIER
+// class and we want to ignore it. Rather than looking
+// for GLACIER explicitly, we look for the ones we want
+// because amazon might add new ones.
+func (g *S3Generator) validClass(class string) bool {
+	switch class {
+	case "", "STANDARD", "REDUCED_REDUNDANCY":
+		return true
+	default:
+		return false
+	}
+}
+
 func (g *S3Generator) Generate() (*cypress.Message, error) {
 restart:
 
@@ -321,6 +334,10 @@ restart:
 			}
 
 			g.cur = 0
+		}
+
+		if !g.validClass(g.list.Contents[g.cur].StorageClass) {
+			goto restart
 		}
 
 		resp, err := g.bucket.GetResponse(g.list.Contents[g.cur].Key)
