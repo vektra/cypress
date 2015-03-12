@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"time"
+
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/statsd"
 )
@@ -33,7 +35,13 @@ func (s *Statsd) handleMetric(sm *statsd.Metric) {
 	m := cypress.Metric()
 	m.AddString("name", sm.Bucket)
 	m.AddString("type", sm.Type.String())
-	m.AddFloat("value", sm.Value)
+
+	if sm.Type == statsd.TIMER {
+		dur := time.Duration(sm.Value * float64(time.Millisecond))
+		m.AddDuration("value", dur)
+	} else {
+		m.AddFloat("value", sm.Value)
+	}
 
 	s.out.Receive(m)
 }

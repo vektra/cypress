@@ -661,6 +661,11 @@ func durationToInterval(dur time.Duration) *Interval {
 	}
 }
 
+func (i *Interval) Duration() time.Duration {
+	return (time.Duration(i.Seconds) * time.Second) +
+		(time.Duration(i.Nanoseconds) * time.Nanosecond)
+}
+
 func (m *Message) AddDuration(key string, dur time.Duration) error {
 	attr := &Attribute{}
 
