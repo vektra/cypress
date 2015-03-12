@@ -38,7 +38,7 @@ func TestStatsd(t *testing.T) {
 		// The Close() here is to get Run() to return, but there is a race
 		// that cause the packet sent above to not get there before the
 		// close so we sched to be sure it does.
-		runtime.Gosched()
+		time.Sleep(10 * time.Millisecond)
 		s.Server.Close()
 
 		require.NoError(t, err)
