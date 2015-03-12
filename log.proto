@@ -23,6 +23,7 @@ message Attribute {
   optional bytes    bval = 5 [(gogoproto.moretags) = "codec:\"bval,omitempty\""];
   optional Interval tval = 6 [(gogoproto.moretags) = "codec:\"tval,omitempty\""];
   optional bool  boolval = 7 [(gogoproto.moretags) = "codec:\"boolval,omitempty\""];
+  optional double   fval = 8 [(gogoproto.moretags) = "codec:\"fval,omitempty\""];
 }
 
 message Message {

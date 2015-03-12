@@ -100,6 +100,7 @@ type Attribute struct {
 	Bval             []byte    `protobuf:"bytes,5,opt,name=bval" json:"bval,omitempty" codec:"bval,omitempty"`
 	Tval             *Interval `protobuf:"bytes,6,opt,name=tval" json:"tval,omitempty" codec:"tval,omitempty"`
 	Boolval          *bool     `protobuf:"varint,7,opt,name=boolval" json:"boolval,omitempty" codec:"boolval,omitempty"`
+	Fval             *float64  `protobuf:"fixed64,8,opt,name=fval" json:"fval,omitempty" codec:"fval,omitempty"`
 	XXX_unrecognized []byte    `json:"-" codec:"-"`
 }
 
@@ -154,6 +155,13 @@ func (m *Attribute) GetBoolval() bool {
 		return *m.Boolval
 	}
 	return false
+}
+
+func (m *Attribute) GetFval() float64 {
+	if m != nil && m.Fval != nil {
+		return *m.Fval
+	}
+	return 0
 }
 
 type Message struct {
@@ -453,6 +461,26 @@ func (m *Attribute) Unmarshal(data []byte) error {
 			}
 			b := bool(v != 0)
 			m.Boolval = &b
+		case 8:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Fval", wireType)
+			}
+			var v uint64
+			i := index + 8
+			if i > l {
+				return io.ErrUnexpectedEOF
+			}
+			index = i
+			v = uint64(data[i-8])
+			v |= uint64(data[i-7]) << 8
+			v |= uint64(data[i-6]) << 16
+			v |= uint64(data[i-5]) << 24
+			v |= uint64(data[i-4]) << 32
+			v |= uint64(data[i-3]) << 40
+			v |= uint64(data[i-2]) << 48
+			v |= uint64(data[i-1]) << 56
+			v2 := math.Float64frombits(v)
+			m.Fval = &v2
 		default:
 			var sizeOfWire int
 			for {
@@ -704,6 +732,9 @@ func (m *Attribute) Size() (n int) {
 	if m.Boolval != nil {
 		n += 2
 	}
+	if m.Fval != nil {
+		n += 9
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -848,6 +879,11 @@ func (m *Attribute) MarshalTo(data []byte) (n int, err error) {
 			data[i] = 0
 		}
 		i++
+	}
+	if m.Fval != nil {
+		data[i] = 0x41
+		i++
+		i = encodeFixed64Log(data, i, uint64(math.Float64bits(*m.Fval)))
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(data[i:], m.XXX_unrecognized)
@@ -1089,6 +1125,15 @@ func (this *Attribute) VerboseEqual(that interface{}) error {
 	} else if that1.Boolval != nil {
 		return fmt.Errorf("Boolval this(%v) Not Equal that(%v)", this.Boolval, that1.Boolval)
 	}
+	if this.Fval != nil && that1.Fval != nil {
+		if *this.Fval != *that1.Fval {
+			return fmt.Errorf("Fval this(%v) Not Equal that(%v)", *this.Fval, *that1.Fval)
+		}
+	} else if this.Fval != nil {
+		return fmt.Errorf("this.Fval == nil && that.Fval != nil")
+	} else if that1.Fval != nil {
+		return fmt.Errorf("Fval this(%v) Not Equal that(%v)", this.Fval, that1.Fval)
+	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
 	}
@@ -1157,6 +1202,15 @@ func (this *Attribute) Equal(that interface{}) bool {
 	} else if this.Boolval != nil {
 		return false
 	} else if that1.Boolval != nil {
+		return false
+	}
+	if this.Fval != nil && that1.Fval != nil {
+		if *this.Fval != *that1.Fval {
+			return false
+		}
+	} else if this.Fval != nil {
+		return false
+	} else if that1.Fval != nil {
 		return false
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {

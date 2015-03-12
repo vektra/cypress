@@ -294,6 +294,10 @@ func (m *Message) Get(key string) (interface{}, bool) {
 				return *attr.Ival, true
 			}
 
+			if attr.Fval != nil {
+				return *attr.Fval, true
+			}
+
 			if attr.Sval != nil {
 				return *attr.Sval, true
 			}
@@ -323,6 +327,20 @@ func (m *Message) GetInt(key string) (int64, bool) {
 			}
 
 			return *attr.Ival, true
+		}
+	}
+
+	return 0, false
+}
+
+func (m *Message) GetFloat(key string) (float64, bool) {
+	for _, attr := range m.Attributes {
+		if attr.StringKey() == key {
+			if attr.Fval == nil {
+				return 0, false
+			}
+
+			return *attr.Fval, true
 		}
 	}
 
@@ -426,6 +444,12 @@ func (m *Message) Add(key string, val interface{}) error {
 	case int64:
 		bi := x
 		attr.Ival = &bi
+	case float32:
+		bi := float64(x)
+		attr.Fval = &bi
+	case float64:
+		bi := x
+		attr.Fval = &bi
 	case Inter:
 		t := x.Int()
 		attr.Ival = &t
@@ -552,6 +576,21 @@ func (m *Message) AddInt(key string, val int64) error {
 	}
 
 	attr.Ival = &val
+
+	m.Attributes = append(m.Attributes, attr)
+	return nil
+}
+
+func (m *Message) AddFloat(key string, val float64) error {
+	attr := &Attribute{}
+
+	if val, ok := PresetKeys[key]; ok {
+		attr.Key = val
+	} else {
+		attr.Skey = &key
+	}
+
+	attr.Fval = &val
 
 	m.Attributes = append(m.Attributes, attr)
 	return nil
