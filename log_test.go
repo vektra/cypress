@@ -101,6 +101,18 @@ func checkInt(t *testing.T, m *Message, key string, exp int64) {
 	}
 }
 
+func checkFloat(t *testing.T, m *Message, key string, exp float64) {
+	act, ok := m.GetFloat(key)
+
+	if !ok {
+		t.Errorf("Didn't parse %s correctly", key)
+	}
+
+	if exp != act {
+		t.Errorf("Didn't parse %s correctly", key)
+	}
+}
+
 func checkStr(t *testing.T, m *Message, key string, exp string) {
 	act, ok := m.GetString(key)
 
@@ -114,7 +126,7 @@ func checkStr(t *testing.T, m *Message, key string, exp string) {
 }
 
 func TestParseKV(t *testing.T) {
-	line := `> id=1 remote="10.1.42.1" time="1377377621.034" method=GET request="/test" size=171 proc="0.000" status=200 body=157 for="-"`
+	line := `> id=1 remote="10.1.42.1" time="1377377621.034" method=GET request="/test" size=171 proc=3.251 status=200 body=157 for="-"`
 
 	m, err := ParseKV(line)
 
@@ -125,6 +137,7 @@ func TestParseKV(t *testing.T) {
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
 	checkStr(t, m, "for", "-")
+	checkFloat(t, m, "proc", 3.251)
 }
 
 func TestParseKVSeconds(t *testing.T) {

@@ -13,16 +13,19 @@ func (attr Attribute) MarshalJSON() ([]byte, error) {
 
 	key = attr.StringKey()
 
-	if attr.Ival != nil {
+	switch {
+	case attr.Ival != nil:
 		return []byte(fmt.Sprintf("{ \"%s\": %d }", key, *attr.Ival)), nil
-	} else if attr.Sval != nil {
+	case attr.Fval != nil:
+		return []byte(fmt.Sprintf("{ \"%s\": %f }", key, *attr.Fval)), nil
+	case attr.Sval != nil:
 		v, err := json.Marshal(attr.Sval)
 		if err != nil {
 			return nil, err
 		}
 
 		return []byte(fmt.Sprintf("{ \"%s\": %s }", key, v)), nil
-	} else if attr.Bval != nil {
+	case attr.Bval != nil:
 		v, err := json.Marshal(attr.Bval)
 		if err != nil {
 			return nil, err
@@ -32,7 +35,7 @@ func (attr Attribute) MarshalJSON() ([]byte, error) {
 		// the literal as a pure map[string]string so we use an empty string.
 		// It's just the presence of _bytes that matters anyway
 		return []byte(fmt.Sprintf("{ \"%s\": %s, \"_bytes\": \"\" }", key, string(v))), nil
-	} else if attr.Tval != nil {
+	case attr.Tval != nil:
 		v, err := json.Marshal(attr.Tval)
 
 		if err != nil {
@@ -40,7 +43,7 @@ func (attr Attribute) MarshalJSON() ([]byte, error) {
 		}
 
 		return []byte(fmt.Sprintf("{ \"%s\": %s }", key, v)), nil
-	} else {
+	default:
 		return []byte(fmt.Sprintf("{ \"%s\": 1 }", key)), nil
 	}
 }

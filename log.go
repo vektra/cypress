@@ -110,17 +110,20 @@ func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 		buf.WriteString(attr.StringKey())
 		buf.WriteString("=")
 
-		if attr.Ival != nil {
+		switch {
+		case attr.Ival != nil:
 			buf.WriteString(strconv.FormatInt(*attr.Ival, 10))
-		} else if attr.Sval != nil {
+		case attr.Fval != nil:
+			buf.WriteString(strconv.FormatFloat(*attr.Fval, 'g', -1, 64))
+		case attr.Sval != nil:
 			buf.WriteString("\"")
 			buf.WriteString(strquote(*attr.Sval))
 			buf.WriteString("\"")
-		} else if attr.Bval != nil {
+		case attr.Bval != nil:
 			buf.WriteString("\"")
 			buf.WriteString(strquote(string(attr.Bval)))
 			buf.WriteString("\"")
-		} else if attr.Tval != nil {
+		case attr.Tval != nil:
 			buf.WriteString(":")
 			buf.WriteString(strconv.FormatInt(int64(attr.Tval.GetSeconds()), 10))
 			buf.WriteString(".")

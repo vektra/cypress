@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 	"text/scanner"
 
 	"github.com/gogo/protobuf/proto"
@@ -14,7 +15,7 @@ import (
 var EParseError = errors.New("Unable to parse line")
 
 const whitespace = 1<<'\t' | 1<<' '
-const tokens = scanner.ScanIdents | scanner.ScanInts | scanner.ScanStrings
+const tokens = scanner.ScanIdents | scanner.ScanFloats | scanner.ScanStrings
 
 type KVStream struct {
 	Src    io.Reader
@@ -216,25 +217,20 @@ func (s *KVStream) Parse() error {
 			case ':':
 				st := scan.Scan()
 
-				if st != scanner.Int {
+				if st != scanner.Float {
 					goto bad
 				}
 
-				tsec := scan.TokenText()
+				dec := scan.TokenText()
 
-				st = scan.Scan()
+				dot := strings.IndexByte(dec, '.')
 
-				if st != '.' {
+				if dot == -1 {
 					goto bad
 				}
 
-				st = scan.Scan()
-
-				if st != scanner.Int {
-					goto bad
-				}
-
-				tssec := scan.TokenText()
+				tsec := dec[:dot]
+				tssec := dec[dot+1:]
 
 				sec, _ := strconv.ParseInt(tsec, 10, 64)
 				subsec, _ := strconv.ParseInt(tssec, 10, 32)
@@ -251,11 +247,23 @@ func (s *KVStream) Parse() error {
 				}
 
 				m.AddInt(key, i)
+			case scanner.Float:
+				i, err := strconv.ParseFloat(scan.TokenText(), 64)
+				if err != nil {
+					i, err := strconv.ParseInt(scan.TokenText(), 0, 64)
+					if err != nil {
+						goto bad
+					}
+
+					m.AddInt(key, i)
+				} else {
+					m.AddFloat(key, i)
+				}
 			case scanner.String, scanner.RawString:
 				s := scan.TokenText()
 
 				m.AddString(key, s[1:len(s)-1])
-			case scanner.Ident, scanner.Float, scanner.Char:
+			case scanner.Ident, scanner.Char:
 				m.AddString(key, scan.TokenText())
 
 			default:
