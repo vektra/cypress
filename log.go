@@ -29,36 +29,36 @@ var PresetKeysFromIndex = map[uint32]string{
 	3: "source",
 }
 
-const tLog = 0
-const tMetric = 1
-const tTrace = 2
-const tAudit = 3
+const LOG = 0
+const METRIC = 1
+const TRACE = 2
+const AUDIT = 3
 
 func Log() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(tLog)}
+	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(LOG)}
 }
 
 func Metric() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(tMetric)}
+	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(METRIC)}
 }
 
 func Trace() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(tTrace)}
+	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(TRACE)}
 }
 
 func Audit() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(tAudit)}
+	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(AUDIT)}
 }
 
 func (m *Message) StringType() string {
 	switch m.GetType() {
-	case tLog:
+	case LOG:
 		return "log"
-	case tMetric:
+	case METRIC:
 		return "metric"
-	case tTrace:
+	case TRACE:
 		return "trace"
-	case tAudit:
+	case AUDIT:
 		return "audit"
 	default:
 		return "unknown"
@@ -143,11 +143,11 @@ func (m *Message) KVString() string {
 func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	buf.WriteString(">")
 	switch {
-	case m.GetType() == tMetric:
+	case m.GetType() == METRIC:
 		buf.WriteString("! ")
-	case m.GetType() == tTrace:
+	case m.GetType() == TRACE:
 		buf.WriteString("$ ")
-	case m.GetType() == tAudit:
+	case m.GetType() == AUDIT:
 		buf.WriteString("* ")
 	default:
 		buf.WriteString(" ")
@@ -237,9 +237,9 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 		buf.WriteString(resetColor)
 	}
 
-	if m.GetType() == tMetric {
+	if m.GetType() == METRIC {
 		buf.WriteString("!")
-	} else if m.GetType() == tTrace {
+	} else if m.GetType() == TRACE {
 		buf.WriteString("$")
 	} else {
 		buf.WriteString("*")
@@ -253,11 +253,11 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 func (m *Message) HumanString() string {
 	var buf bytes.Buffer
 
-	if m.GetType() == tMetric {
+	if m.GetType() == METRIC {
 		buf.WriteString("! ")
-	} else if m.GetType() == tTrace {
+	} else if m.GetType() == TRACE {
 		buf.WriteString("$ ")
-	} else if m.GetType() == tAudit {
+	} else if m.GetType() == AUDIT {
 		buf.WriteString("* ")
 	} else {
 		buf.WriteString(" ")

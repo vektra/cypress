@@ -253,7 +253,7 @@ func TestParseKVStreamBadLogLine(t *testing.T) {
 	}
 
 	for _, m := range mbuf.Messages {
-		if m.GetType() != tLog {
+		if m.GetType() != LOG {
 			t.Errorf("Type not a metric")
 		}
 
@@ -277,7 +277,7 @@ func TestParseKVStreamMetric(t *testing.T) {
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != tMetric {
+	if m.GetType() != METRIC {
 		t.Errorf("Type not a metric")
 	}
 
@@ -300,7 +300,7 @@ func TestParseKVStreamTrace(t *testing.T) {
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != tTrace {
+	if m.GetType() != TRACE {
 		t.Errorf("Type not a trace")
 	}
 
@@ -323,7 +323,7 @@ func TestParseKVStreamAudit(t *testing.T) {
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != tAudit {
+	if m.GetType() != AUDIT {
 		t.Errorf("Type not a trace")
 	}
 

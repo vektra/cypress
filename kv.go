@@ -145,13 +145,13 @@ restart:
 	switch scan.Peek() {
 	case '!':
 		scan.Next()
-		m.Type = proto.Uint32(tMetric)
+		m.Type = proto.Uint32(METRIC)
 	case '$':
 		scan.Next()
-		m.Type = proto.Uint32(tTrace)
+		m.Type = proto.Uint32(TRACE)
 	case '*':
 		scan.Next()
-		m.Type = proto.Uint32(tAudit)
+		m.Type = proto.Uint32(AUDIT)
 	}
 
 	if scan.Next() != ' ' {
