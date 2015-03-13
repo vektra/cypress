@@ -3,6 +3,7 @@ package cypress
 import (
 	"io"
 	"io/ioutil"
+	"time"
 
 	"github.com/naoina/toml"
 )
@@ -37,4 +38,14 @@ func LoadMergedConfig(path string, cfg *Config) error {
 	}
 
 	return toml.Unmarshal(data, &cfg)
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalTOML(data []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(data[1 : len(data)-1]))
+	return err
 }

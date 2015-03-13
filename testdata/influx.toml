@@ -1,0 +1,7 @@
+[influx]
+
+flush = "10s"
+url = "http://localhost:8086"
+username = "root"
+password = "root"
+database = "cypress"

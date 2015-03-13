@@ -29,6 +29,10 @@ func addCommand(name, short, long string, cmd interface{}) {
 }
 
 func Run(args []string) int {
+	defer Lifecycle.RunCleanup()
+
+	Lifecycle.Start()
+
 	_, err := parser().Parse()
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)

@@ -3,14 +3,45 @@ package plugin
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/influxdb"
 )
 
 type MetricSink struct {
 	Registry metrics.Registry
+}
+
+type InfluxConfig struct {
+	Flush     cypress.Duration
+	URL       string
+	Username  string
+	Password  string
+	Database  string
+	UserAgent string
+}
+
+const (
+	DefaultFlushDuration  = "10s"
+	DefaultUserAgent      = "cypress/1"
+	DefaultInfluxUsername = "cypress"
+)
+
+func DefaultInfluxConfig() *InfluxConfig {
+	dur, err := time.ParseDuration(DefaultFlushDuration)
+	if err != nil {
+		panic(err)
+	}
+	return &InfluxConfig{
+		Flush:     cypress.Duration{dur},
+		UserAgent: DefaultUserAgent,
+		Username:  DefaultInfluxUsername,
+	}
 }
 
 func NewMetricSink() *MetricSink {
@@ -26,6 +57,39 @@ func (ms *MetricSink) RunHTTP(addr string) error {
 	return serv.ListenAndServe()
 }
 
+func (cfg *InfluxConfig) Export() *influxdb.Config {
+	u, err := url.Parse(fmt.Sprintf("%s/db/%s/series?u=%s&p=%s",
+		cfg.URL, cfg.Database, cfg.Username, cfg.Password))
+
+	if err != nil {
+		panic(err)
+	}
+
+	return &influxdb.Config{
+		URL:       *u,
+		Username:  cfg.Username,
+		Password:  cfg.Password,
+		UserAgent: cfg.UserAgent,
+		Database:  cfg.Database,
+	}
+}
+
+func (ms *MetricSink) EnableInflux(cfg *InfluxConfig) error {
+	xcfg := cfg.Export()
+
+	go influxdb.Influxdb(ms.Registry, cfg.Flush.Duration, xcfg)
+
+	return nil
+}
+
+func (ms *MetricSink) FlushInflux(cfg *InfluxConfig) error {
+	xcfg := cfg.Export()
+
+	influxdb.Influxdb(ms.Registry, 0, xcfg)
+
+	return nil
+}
+
 func (ms *MetricSink) outputMetrics(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(ms.Registry)
 }
@@ -33,6 +97,10 @@ func (ms *MetricSink) outputMetrics(res http.ResponseWriter, req *http.Request) 
 var ErrInvalidMetric = errors.New("invalid metric")
 
 func (ms *MetricSink) Receive(m *cypress.Message) error {
+	if m.GetType() != cypress.METRIC {
+		return nil
+	}
+
 	typ, ok := m.GetString("type")
 	if !ok {
 		return ErrInvalidMetric
