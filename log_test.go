@@ -332,15 +332,16 @@ func TestParseKVStreamAudit(t *testing.T) {
 	checkStr(t, m, "for", "-")
 }
 
-func TestParseKVStreamWithBare(t *testing.T) {
+func TestParseKVWithBare(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\nerror bad stuff\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
 	var mbuf MessageBuffer
 
-	s := KVStream{buf, &mbuf, true, ""}
+	parser := NewKVParser(buf)
+	parser.Bare = true
 
-	s.Parse()
+	Glue(parser, &mbuf)
 
 	if len(mbuf.Messages) != 3 {
 		t.Fatalf("Didn't parse 2 message: %d", len(mbuf.Messages))

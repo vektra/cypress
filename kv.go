@@ -17,274 +17,13 @@ var EParseError = errors.New("Unable to parse line")
 const whitespace = 1<<'\t' | 1<<' '
 const tokens = scanner.ScanIdents | scanner.ScanFloats | scanner.ScanStrings
 
-type KVStream struct {
-	Src    io.Reader
-	Out    Receiver
-	Bare   bool
-	Source string
-}
-
-func (kvs *KVStream) skipToStart(s *scanner.Scanner) rune {
-	if kvs.Bare {
-		var buf bytes.Buffer
-
-		for {
-			switch tok := s.Next(); tok {
-			case '\n':
-				if buf.Len() > 0 {
-					m := Log()
-					if kvs.Source != "" {
-						m.AddString("service", kvs.Source)
-					}
-
-					m.AddString("message", buf.String())
-					kvs.Out.Receive(m)
-
-					buf.Reset()
-				}
-
-				tok = s.Peek()
-
-				if tok == '>' || tok == scanner.EOF {
-					s.Next() // consume the >
-					return tok
-				}
-
-			case scanner.EOF:
-				if buf.Len() > 0 {
-					m := Log()
-
-					if kvs.Source != "" {
-						m.AddString("source", kvs.Source)
-					}
-
-					m.AddString("message", buf.String())
-					kvs.Out.Receive(m)
-
-				}
-				return scanner.EOF
-
-			default:
-				buf.WriteString(string(tok))
-			}
-		}
-	} else {
-		for {
-			switch tok := s.Next(); tok {
-			case '\n':
-				tok = s.Peek()
-
-				if tok == '>' || tok == scanner.EOF {
-					s.Next() // consume the >
-					return tok
-				}
-
-			case scanner.EOF:
-				return scanner.EOF
-			}
-		}
-	}
-}
-
-func (kvs *KVStream) skipToNewline(s *scanner.Scanner) {
-	for {
-		tok := s.Scan()
-
-		if tok == '\n' || tok == scanner.EOF {
-			return
-		}
-	}
-}
-
 var cToNano = []int64{100000000, 10000000, 1000000, 100000, 10000, 1000,
 	100, 10, 1}
 
-func (s *KVStream) Parse() error {
-	var scan scanner.Scanner
+func ParseKVStream(in io.Reader, r Receiver) error {
+	parser := NewKVParser(in)
 
-	scan.Init(s.Src)
-	scan.Whitespace = whitespace
-	scan.Mode = tokens
-
-	// Scan the input looking for lines that start with >
-	for {
-		tok := scan.Peek()
-
-		if tok != '>' {
-			tok = s.skipToStart(&scan)
-		} else {
-			scan.Next() // consume the >
-		}
-
-		if tok == scanner.EOF {
-			return io.EOF
-		}
-
-		// We're at the start of a message now
-
-		m := Log()
-		if s.Source != "" {
-			m.AddString("source", s.Source)
-		}
-
-		// Detect a type flag
-		switch scan.Peek() {
-		case '!':
-			scan.Next()
-			m.Type = proto.Uint32(tMetric)
-		case '$':
-			scan.Next()
-			m.Type = proto.Uint32(tTrace)
-		case '*':
-			scan.Next()
-			m.Type = proto.Uint32(tAudit)
-		}
-
-		if scan.Next() != ' ' {
-			s.skipToNewline(&scan)
-			continue
-		}
-
-		// Detect a predeclared timestamp
-		if scan.Peek() == '@' {
-			scan.Next() // consume the @
-
-			var buf bytes.Buffer
-
-			buf.WriteString("@")
-
-			for {
-				tok := scan.Next()
-
-				if tok == ' ' {
-					ts := tai64n.ParseTAI64NLabel(buf.String())
-
-					if ts != nil {
-						m.Timestamp = ts
-					}
-
-					break
-				} else {
-					buf.WriteString(string(tok))
-				}
-			}
-		}
-
-		if scan.Peek() == '\\' {
-			scan.Next() // consume the \
-
-			var buf bytes.Buffer
-
-			for {
-				tok := scan.Next()
-
-				if tok == ' ' {
-					m.SessionId = proto.String(buf.String())
-					break
-				} else {
-					buf.WriteString(string(tok))
-				}
-			}
-		}
-
-		// Pull out a key=val sequence
-		for {
-			tok = scan.Peek()
-
-			var key string
-
-			if tok == '\n' || tok == scanner.EOF {
-				if m != nil {
-					s.Out.Receive(m)
-				}
-
-				break
-			}
-
-			tok = scan.Scan()
-
-			if tok != scanner.Ident {
-				goto bad
-			}
-
-			key = scan.TokenText()
-
-			if scan.Scan() != '=' {
-				goto bad
-			}
-
-			switch scan.Scan() {
-			case ':':
-				st := scan.Scan()
-
-				if st != scanner.Float {
-					goto bad
-				}
-
-				dec := scan.TokenText()
-
-				dot := strings.IndexByte(dec, '.')
-
-				if dot == -1 {
-					goto bad
-				}
-
-				tsec := dec[:dot]
-				tssec := dec[dot+1:]
-
-				sec, _ := strconv.ParseInt(tsec, 10, 64)
-				subsec, _ := strconv.ParseInt(tssec, 10, 32)
-
-				if len(tssec) <= 9 {
-					subsec *= cToNano[len(tssec)-1]
-				}
-
-				m.AddInterval(key, uint64(sec), uint32(subsec))
-			case scanner.Int:
-				i, err := strconv.ParseInt(scan.TokenText(), 0, 64)
-				if err != nil {
-					goto bad
-				}
-
-				m.AddInt(key, i)
-			case scanner.Float:
-				i, err := strconv.ParseFloat(scan.TokenText(), 64)
-				if err != nil {
-					i, err := strconv.ParseInt(scan.TokenText(), 0, 64)
-					if err != nil {
-						goto bad
-					}
-
-					m.AddInt(key, i)
-				} else {
-					m.AddFloat(key, i)
-				}
-			case scanner.String, scanner.RawString:
-				s := scan.TokenText()
-
-				m.AddString(key, s[1:len(s)-1])
-			case scanner.Ident, scanner.Char:
-				m.AddString(key, scan.TokenText())
-
-			default:
-				goto bad
-			}
-
-			continue
-
-		bad:
-			s.skipToNewline(&scan)
-
-			break
-		}
-	} // for each line
-
-	return nil
-}
-
-func ParseKVStream(in io.Reader, r Receiver) {
-	s := KVStream{in, r, false, ""}
-	s.Parse()
+	return Glue(parser, r)
 }
 
 type MessageBuffer struct {
@@ -295,24 +34,18 @@ func (b *MessageBuffer) Receive(m *Message) (err error) {
 	b.Messages = append(b.Messages, m)
 	return nil
 }
-
 func ParseKV(line string) (*Message, error) {
 	buf := bytes.NewReader([]byte(line))
 
-	var mbuf MessageBuffer
+	parser := NewKVParser(buf)
 
-	ParseKVStream(buf, &mbuf)
-
-	if len(mbuf.Messages) == 0 {
-		return nil, EParseError
-	}
-
-	return mbuf.Messages[0], nil
+	return parser.Generate()
 }
 
 type KVParser struct {
+	Bare bool
+
 	r    io.Reader
-	bare bool
 	scan scanner.Scanner
 }
 
@@ -337,7 +70,7 @@ func (kv *KVParser) readBare() (*Message, error) {
 				return m, nil
 			}
 
-			break
+			return nil, io.EOF
 
 		default:
 			buf.WriteString(string(tok))
@@ -391,7 +124,7 @@ restart:
 	tok := scan.Peek()
 
 	if tok != '>' {
-		if s.bare {
+		if s.Bare {
 			return s.readBare()
 		}
 
@@ -493,25 +226,20 @@ restart:
 		case ':':
 			st := scan.Scan()
 
-			if st != scanner.Int {
+			if st != scanner.Float {
 				goto bad
 			}
 
-			tsec := scan.TokenText()
+			dec := scan.TokenText()
 
-			st = scan.Scan()
+			dot := strings.IndexByte(dec, '.')
 
-			if st != '.' {
+			if dot == -1 {
 				goto bad
 			}
 
-			st = scan.Scan()
-
-			if st != scanner.Int {
-				goto bad
-			}
-
-			tssec := scan.TokenText()
+			tsec := dec[:dot]
+			tssec := dec[dot+1:]
 
 			sec, _ := strconv.ParseInt(tsec, 10, 64)
 			subsec, _ := strconv.ParseInt(tssec, 10, 32)
@@ -528,11 +256,23 @@ restart:
 			}
 
 			m.AddInt(key, i)
+		case scanner.Float:
+			i, err := strconv.ParseFloat(scan.TokenText(), 64)
+			if err != nil {
+				i, err := strconv.ParseInt(scan.TokenText(), 0, 64)
+				if err != nil {
+					goto bad
+				}
+
+				m.AddInt(key, i)
+			} else {
+				m.AddFloat(key, i)
+			}
 		case scanner.String, scanner.RawString:
 			s := scan.TokenText()
 
 			m.AddString(key, s[1:len(s)-1])
-		case scanner.Ident, scanner.Float, scanner.Char:
+		case scanner.Ident, scanner.Char:
 			m.AddString(key, scan.TokenText())
 
 		default:
@@ -544,8 +284,12 @@ restart:
 	bad:
 		s.skipToNewline()
 
-		break
+		goto restart
 	}
 
 	return nil, io.EOF
+}
+
+func (p *KVParser) Close() error {
+	return nil
 }
