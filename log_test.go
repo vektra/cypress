@@ -457,6 +457,48 @@ func TestMessageKVTrace(t *testing.T) {
 	}
 }
 
+func TestMessageKVStringIncludeTags(t *testing.T) {
+	line := "> @40000000521BBC7D163ED116 [region=\"us-west-1\"] id=1 time=:1.001 for=\"-\""
+
+	buf := bytes.NewReader([]byte(line))
+	var mbuf MessageBuffer
+
+	ParseKVStream(buf, &mbuf)
+
+	if len(mbuf.Messages) != 1 {
+		t.Errorf("Didn't parse 1 message: %d", len(mbuf.Messages))
+	}
+
+	m := mbuf.Messages[0]
+
+	kv := m.KVString()
+
+	if kv != "> @40000000521BBC7D163ED116 [region=\"us-west-1\"] id=1 time=:1.001 for=\"-\"" {
+		t.Errorf("KVString didn't output proper format: '%s'", kv)
+	}
+}
+
+func TestMessageKVStringIncludeValuelessTags(t *testing.T) {
+	line := "> @40000000521BBC7D163ED116 [region=\"us-west-1\" !secure] id=1 time=:1.001 for=\"-\""
+
+	buf := bytes.NewReader([]byte(line))
+	var mbuf MessageBuffer
+
+	ParseKVStream(buf, &mbuf)
+
+	if len(mbuf.Messages) != 1 {
+		t.Errorf("Didn't parse 1 message: %d", len(mbuf.Messages))
+	}
+
+	m := mbuf.Messages[0]
+
+	kv := m.KVString()
+
+	if kv != "> @40000000521BBC7D163ED116 [region=\"us-west-1\" !secure] id=1 time=:1.001 for=\"-\"" {
+		t.Errorf("KVString didn't output proper format: '%s'", kv)
+	}
+}
+
 func TestAddSlice(t *testing.T) {
 	m := Log()
 	err := m.Add("things", []string{"one", "two", "three"})

@@ -160,7 +160,34 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 		buf.WriteString(s)
 	}
 
+	m.KVTagsInto(buf)
 	m.KVPairsInto(buf)
+}
+
+func (m *Message) KVTagsInto(buf *bytes.Buffer) {
+	if len(m.Tags) > 0 {
+		buf.WriteString(" [")
+
+		for i := 0; i < len(m.Tags); i++ {
+			if m.Tags[i].Value == nil {
+				buf.WriteString("!")
+				buf.WriteString(m.Tags[i].Name)
+			} else {
+				buf.WriteString(m.Tags[i].Name)
+				buf.WriteString("=")
+
+				buf.WriteString("\"")
+				buf.WriteString(strquote(*m.Tags[i].Value))
+				buf.WriteString("\"")
+
+				if i < len(m.Tags)-1 {
+					buf.WriteString(" ")
+				}
+			}
+		}
+
+		buf.WriteString("]")
+	}
 }
 
 var voltColor = ansi.ColorCode("blue")
@@ -245,6 +272,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 		buf.WriteString("*")
 	}
 
+	m.KVTagsInto(&buf)
 	buf.WriteString(m.KVPairs())
 
 	return buf.String()
@@ -273,6 +301,7 @@ func (m *Message) HumanString() string {
 		buf.WriteString("0000000")
 	}
 
+	m.KVTagsInto(&buf)
 	buf.WriteString(m.KVPairs())
 
 	return buf.String()

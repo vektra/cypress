@@ -200,6 +200,68 @@ restart:
 		}
 	}
 
+	if scan.Peek() == '[' {
+		scan.Next()
+
+		for {
+			var name, value string
+
+			tok := scan.Scan()
+
+			if tok == ']' {
+				break
+			}
+
+			if tok == '!' {
+				tok = scan.Scan()
+
+				if tok != scanner.Ident {
+					goto badtag
+				}
+
+				name = scan.TokenText()
+
+				m.Tags = append(m.Tags, &Tag{Name: name})
+
+				continue
+			}
+
+			if tok != scanner.Ident {
+				goto badtag
+			}
+
+			name = scan.TokenText()
+
+			tok = scan.Scan()
+
+			if tok != '=' {
+				goto badtag
+			}
+
+			tok = scan.Scan()
+
+			switch tok {
+			case scanner.String, scanner.RawString:
+				value = scan.TokenText()
+
+				value = value[1 : len(value)-1]
+			case scanner.Ident:
+				value = scan.TokenText()
+			default:
+				goto badtag
+			}
+
+			m.Tags = append(m.Tags, &Tag{Name: name, Value: &value})
+
+			continue
+
+		badtag:
+			s.skipToNewline()
+
+			goto restart
+		}
+	}
+
 	// Pull out a key=val sequence
 	for {
 		tok = scan.Peek()

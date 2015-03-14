@@ -26,6 +26,11 @@ message Attribute {
   optional double   fval = 8 [(gogoproto.moretags) = "codec:\"fval,omitempty\""];
 }
 
+message Tag {
+  required string name = 1  [(gogoproto.nullable) = false, (gogoproto.moretags) = "codec:\"name\""];
+  optional string value = 2 [(gogoproto.moretags) = "codec:\"value,omitempty\""];;
+}
+
 message Message {
   required tai64n.TAI64n timestamp = 1 [(gogoproto.moretags) = "codec:\"timestamp\""];
   required uint32 type = 2 [(gogoproto.moretags) = "codec:\"type\""];
@@ -33,6 +38,8 @@ message Message {
   repeated Attribute attributes = 3 [(gogoproto.moretags) = "codec:\"attributes\""];
 
   optional string session_id = 4 [(gogoproto.moretags) = "codec:\"session_id\""];
+
+  repeated Tag Tags = 5 [(gogoproto.moretags) = "codec:\"tags\""];
 }
 
 message StreamHeader {

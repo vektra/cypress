@@ -11,6 +11,7 @@
 	It has these top-level messages:
 		Interval
 		Attribute
+		Tag
 		Message
 		StreamHeader
 */
@@ -164,11 +165,36 @@ func (m *Attribute) GetFval() float64 {
 	return 0
 }
 
+type Tag struct {
+	Name             string  `protobuf:"bytes,1,req,name=name" json:"name" codec:"name"`
+	Value            *string `protobuf:"bytes,2,opt,name=value" json:"value,omitempty" codec:"value,omitempty"`
+	XXX_unrecognized []byte  `json:"-" codec:"-"`
+}
+
+func (m *Tag) Reset()         { *m = Tag{} }
+func (m *Tag) String() string { return proto.CompactTextString(m) }
+func (*Tag) ProtoMessage()    {}
+
+func (m *Tag) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *Tag) GetValue() string {
+	if m != nil && m.Value != nil {
+		return *m.Value
+	}
+	return ""
+}
+
 type Message struct {
 	Timestamp        *tai64n.TAI64N `protobuf:"bytes,1,req,name=timestamp" json:"timestamp,omitempty" codec:"timestamp"`
 	Type             *uint32        `protobuf:"varint,2,req,name=type" json:"type,omitempty" codec:"type"`
 	Attributes       []*Attribute   `protobuf:"bytes,3,rep,name=attributes" json:"attributes,omitempty" codec:"attributes"`
 	SessionId        *string        `protobuf:"bytes,4,opt,name=session_id" json:"session_id,omitempty" codec:"session_id"`
+	Tags             []*Tag         `protobuf:"bytes,5,rep" json:"Tags,omitempty" codec:"tags"`
 	XXX_unrecognized []byte         `json:"-" codec:"-"`
 }
 
@@ -202,6 +228,13 @@ func (m *Message) GetSessionId() string {
 		return *m.SessionId
 	}
 	return ""
+}
+
+func (m *Message) GetTags() []*Tag {
+	if m != nil {
+		return m.Tags
+	}
+	return nil
 }
 
 type StreamHeader struct {
@@ -504,6 +537,93 @@ func (m *Attribute) Unmarshal(data []byte) error {
 	}
 	return nil
 }
+func (m *Tag) Unmarshal(data []byte) error {
+	l := len(data)
+	index := 0
+	for index < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if index >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := data[index]
+			index++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			postIndex := index + int(stringLen)
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(data[index:postIndex])
+			index = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			postIndex := index + int(stringLen)
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			s := string(data[index:postIndex])
+			m.Value = &s
+			index = postIndex
+		default:
+			var sizeOfWire int
+			for {
+				sizeOfWire++
+				wire >>= 7
+				if wire == 0 {
+					break
+				}
+			}
+			index -= sizeOfWire
+			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			if err != nil {
+				return err
+			}
+			if (index + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, data[index:index+skippy]...)
+			index += skippy
+		}
+	}
+	return nil
+}
 func (m *Message) Unmarshal(data []byte) error {
 	l := len(data)
 	index := 0
@@ -612,6 +732,29 @@ func (m *Message) Unmarshal(data []byte) error {
 			}
 			s := string(data[index:postIndex])
 			m.SessionId = &s
+			index = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Tags", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			postIndex := index + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Tags = append(m.Tags, &Tag{})
+			m.Tags[len(m.Tags)-1].Unmarshal(data[index:postIndex])
 			index = postIndex
 		default:
 			var sizeOfWire int
@@ -741,6 +884,21 @@ func (m *Attribute) Size() (n int) {
 	return n
 }
 
+func (m *Tag) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.Name)
+	n += 1 + l + sovLog(uint64(l))
+	if m.Value != nil {
+		l = len(*m.Value)
+		n += 1 + l + sovLog(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *Message) Size() (n int) {
 	var l int
 	_ = l
@@ -760,6 +918,12 @@ func (m *Message) Size() (n int) {
 	if m.SessionId != nil {
 		l = len(*m.SessionId)
 		n += 1 + l + sovLog(uint64(l))
+	}
+	if len(m.Tags) > 0 {
+		for _, e := range m.Tags {
+			l = e.Size()
+			n += 1 + l + sovLog(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -891,6 +1055,37 @@ func (m *Attribute) MarshalTo(data []byte) (n int, err error) {
 	return i, nil
 }
 
+func (m *Tag) Marshal() (data []byte, err error) {
+	size := m.Size()
+	data = make([]byte, size)
+	n, err := m.MarshalTo(data)
+	if err != nil {
+		return nil, err
+	}
+	return data[:n], nil
+}
+
+func (m *Tag) MarshalTo(data []byte) (n int, err error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	data[i] = 0xa
+	i++
+	i = encodeVarintLog(data, i, uint64(len(m.Name)))
+	i += copy(data[i:], m.Name)
+	if m.Value != nil {
+		data[i] = 0x12
+		i++
+		i = encodeVarintLog(data, i, uint64(len(*m.Value)))
+		i += copy(data[i:], *m.Value)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(data[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
 func (m *Message) Marshal() (data []byte, err error) {
 	size := m.Size()
 	data = make([]byte, size)
@@ -938,6 +1133,18 @@ func (m *Message) MarshalTo(data []byte) (n int, err error) {
 		i++
 		i = encodeVarintLog(data, i, uint64(len(*m.SessionId)))
 		i += copy(data[i:], *m.SessionId)
+	}
+	if len(m.Tags) > 0 {
+		for _, msg := range m.Tags {
+			data[i] = 0x2a
+			i++
+			i = encodeVarintLog(data, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(data[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(data[i:], m.XXX_unrecognized)
@@ -1218,6 +1425,80 @@ func (this *Attribute) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Tag) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*Tag)
+	if !ok {
+		return fmt.Errorf("that is not of type *Tag")
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *Tag but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *Tagbut is not nil && this == nil")
+	}
+	if this.Name != that1.Name {
+		return fmt.Errorf("Name this(%v) Not Equal that(%v)", this.Name, that1.Name)
+	}
+	if this.Value != nil && that1.Value != nil {
+		if *this.Value != *that1.Value {
+			return fmt.Errorf("Value this(%v) Not Equal that(%v)", *this.Value, *that1.Value)
+		}
+	} else if this.Value != nil {
+		return fmt.Errorf("this.Value == nil && that.Value != nil")
+	} else if that1.Value != nil {
+		return fmt.Errorf("Value this(%v) Not Equal that(%v)", this.Value, that1.Value)
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
+	}
+	return nil
+}
+func (this *Tag) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*Tag)
+	if !ok {
+		return false
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if this.Name != that1.Name {
+		return false
+	}
+	if this.Value != nil && that1.Value != nil {
+		if *this.Value != *that1.Value {
+			return false
+		}
+	} else if this.Value != nil {
+		return false
+	} else if that1.Value != nil {
+		return false
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return false
+	}
+	return true
+}
 func (this *Message) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
@@ -1266,6 +1547,14 @@ func (this *Message) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("this.SessionId == nil && that.SessionId != nil")
 	} else if that1.SessionId != nil {
 		return fmt.Errorf("SessionId this(%v) Not Equal that(%v)", this.SessionId, that1.SessionId)
+	}
+	if len(this.Tags) != len(that1.Tags) {
+		return fmt.Errorf("Tags this(%v) Not Equal that(%v)", len(this.Tags), len(that1.Tags))
+	}
+	for i := range this.Tags {
+		if !this.Tags[i].Equal(that1.Tags[i]) {
+			return fmt.Errorf("Tags this[%v](%v) Not Equal that[%v](%v)", i, this.Tags[i], i, that1.Tags[i])
+		}
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
@@ -1320,6 +1609,14 @@ func (this *Message) Equal(that interface{}) bool {
 		return false
 	} else if that1.SessionId != nil {
 		return false
+	}
+	if len(this.Tags) != len(that1.Tags) {
+		return false
+	}
+	for i := range this.Tags {
+		if !this.Tags[i].Equal(that1.Tags[i]) {
+			return false
+		}
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return false
