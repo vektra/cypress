@@ -1,7 +1,6 @@
 package cypress
 
 import (
-	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -117,9 +116,7 @@ func TestJsonBytes(t *testing.T) {
 	b2, err := json.Marshal(&om)
 	require.NoError(t, err)
 
-	if !bytes.Equal(b, b2) {
-		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
-	}
+	assert.Equal(t, string(b), string(b2))
 }
 
 func TestJsonInterval(t *testing.T) {
@@ -135,17 +132,13 @@ func TestJsonInterval(t *testing.T) {
 	require.NoError(t, err)
 
 	v, ok := om.GetInterval("time")
+	require.True(t, ok)
 
-	if !ok {
-		t.Errorf("Unable to find time")
-	} else if v.GetSeconds() != 10 || v.GetNanoseconds() != 2 {
-		t.Errorf("time didn't roundtrip")
-	}
+	assert.Equal(t, uint64(10), v.GetSeconds())
+	assert.Equal(t, uint32(2), v.GetNanoseconds())
 
 	b2, err := json.Marshal(&om)
 	require.NoError(t, err)
 
-	if !bytes.Equal(b, b2) {
-		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
-	}
+	assert.Equal(t, string(b), string(b2))
 }
