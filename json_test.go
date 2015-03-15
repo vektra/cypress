@@ -1,6 +1,7 @@
 package cypress
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -99,4 +100,52 @@ func TestJSONMap(t *testing.T) {
 	})
 
 	n.Meow()
+}
+
+func TestJsonBytes(t *testing.T) {
+	m := Log()
+	m.Add("message", []byte("This is a test"))
+
+	b, err := json.Marshal(m)
+	require.NoError(t, err)
+
+	var om Message
+
+	err = json.Unmarshal(b, &om)
+	require.NoError(t, err)
+
+	b2, err := json.Marshal(&om)
+	require.NoError(t, err)
+
+	if !bytes.Equal(b, b2) {
+		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
+	}
+}
+
+func TestJsonInterval(t *testing.T) {
+	m := Log()
+	m.AddInterval("time", 10, 2)
+
+	b, err := json.Marshal(m)
+	require.NoError(t, err)
+
+	var om Message
+
+	err = json.Unmarshal(b, &om)
+	require.NoError(t, err)
+
+	v, ok := om.GetInterval("time")
+
+	if !ok {
+		t.Errorf("Unable to find time")
+	} else if v.GetSeconds() != 10 || v.GetNanoseconds() != 2 {
+		t.Errorf("time didn't roundtrip")
+	}
+
+	b2, err := json.Marshal(&om)
+	require.NoError(t, err)
+
+	if !bytes.Equal(b, b2) {
+		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
+	}
 }

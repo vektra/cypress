@@ -2,7 +2,6 @@ package cypress
 
 import (
 	"bytes"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,116 +20,29 @@ func TestAddBool(t *testing.T) {
 	assert.True(t, v.(bool))
 }
 
-func TestJsonBytes(t *testing.T) {
-	m := Log()
-	err := m.Add("message", []byte("This is a test"))
-	err = m.Add("blah", "foo")
-	err = m.Add("add", 10)
-
-	if err != nil {
-		panic(err)
-	}
-
-	b, err := json.Marshal(m)
-
-	if err != nil {
-		panic(err)
-	}
-
-	var om Message
-
-	err = json.Unmarshal(b, &om)
-	require.NoError(t, err)
-
-	b2, err := json.Marshal(&om)
-	require.NoError(t, err)
-
-	if !bytes.Equal(b, b2) {
-		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
-	}
-}
-
-func TestJsonInterval(t *testing.T) {
-	m := Log()
-	err := m.AddInterval("time", 10, 2)
-
-	if err != nil {
-		panic(err)
-	}
-
-	b, err := json.Marshal(m)
-
-	if err != nil {
-		panic(err)
-	}
-
-	var om Message
-
-	err = json.Unmarshal(b, &om)
-
-	if err != nil {
-		panic(err)
-	}
-
-	v, ok := om.GetInterval("time")
-
-	if !ok {
-		t.Errorf("Unable to find time")
-	} else if v.GetSeconds() != 10 || v.GetNanoseconds() != 2 {
-		t.Errorf("time didn't roundtrip")
-	}
-
-	b2, err := json.Marshal(&om)
-
-	if !bytes.Equal(b, b2) {
-		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
-	}
-}
-
 func checkInt(t *testing.T, m *Message, key string, exp int64) {
 	act, ok := m.GetInt(key)
-
-	if !ok {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
-
-	if exp != act {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
+	require.True(t, ok)
+	assert.Equal(t, exp, act)
 }
 
 func checkFloat(t *testing.T, m *Message, key string, exp float64) {
 	act, ok := m.GetFloat(key)
-
-	if !ok {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
-
-	if exp != act {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
+	require.True(t, ok)
+	assert.Equal(t, exp, act)
 }
 
 func checkStr(t *testing.T, m *Message, key string, exp string) {
 	act, ok := m.GetString(key)
-
-	if !ok {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
-
-	if exp != act {
-		t.Errorf("Didn't parse %s correctly", key)
-	}
+	require.True(t, ok)
+	assert.Equal(t, exp, act)
 }
 
 func TestParseKV(t *testing.T) {
 	line := `> id=1 remote="10.1.42.1" time="1377377621.034" method=GET request="/test" size=171 proc=3.251 status=200 body=157 for="-"`
 
 	m, err := ParseKV(line)
-
-	if err != nil {
-		t.Fatalf("Unable to parse line")
-	}
+	require.NoError(t, err)
 
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
@@ -142,24 +54,17 @@ func TestParseKVSeconds(t *testing.T) {
 	line := `> id=1 remote="10.1.42.1" time=:1377377621.034 method=GET request="/test" size=171 proc=:0.000 status=200 body=157 for="-"`
 
 	m, err := ParseKV(line)
-
-	if err != nil {
-		t.Fatalf("Unable to parse line")
-	}
+	require.NoError(t, err)
 
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
 	checkStr(t, m, "for", "-")
 
 	act, ok := m.GetInterval("time")
+	require.True(t, ok)
 
-	if !ok {
-		t.Errorf("Didn't parse time correctly")
-	}
-
-	if act.GetSeconds() != 1377377621 || act.GetNanoseconds() != 34000000 {
-		t.Errorf("Didn't parse time correctly %d %d", act.GetSeconds(), act.GetNanoseconds())
-	}
+	assert.Equal(t, uint64(1377377621), act.GetSeconds())
+	assert.Equal(t, uint32(34000000), act.GetNanoseconds())
 }
 
 func TestParseKVStream(t *testing.T) {
@@ -170,9 +75,7 @@ func TestParseKVStream(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 2 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 2, len(mbuf.Messages))
 
 	for _, m := range mbuf.Messages {
 		checkInt(t, m, "id", 1)
@@ -189,9 +92,7 @@ func TestParseKVStreamSkipNonLogLine(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 2 {
-		t.Errorf("Didn't parse 2 message")
-	}
+	assert.Equal(t, 2, len(mbuf.Messages))
 
 	for _, m := range mbuf.Messages {
 		checkInt(t, m, "id", 1)
@@ -208,9 +109,7 @@ func TestParseKVStreamAfterBlankLine(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 2 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 2, len(mbuf.Messages))
 
 	for _, m := range mbuf.Messages {
 		checkInt(t, m, "id", 1)
@@ -227,9 +126,7 @@ func TestParseKVStreamAfterJunkAndBlankLine(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 2 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 2, len(mbuf.Messages))
 
 	for _, m := range mbuf.Messages {
 		checkInt(t, m, "id", 1)
@@ -246,15 +143,9 @@ func TestParseKVStreamBadLogLine(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 2 {
-		t.Errorf("Didn't parse 2 message")
-	}
+	assert.Equal(t, 2, len(mbuf.Messages))
 
 	for _, m := range mbuf.Messages {
-		if m.GetType() != LOG {
-			t.Errorf("Type not a metric")
-		}
-
 		checkInt(t, m, "id", 1)
 		checkInt(t, m, "size", 171)
 		checkStr(t, m, "for", "-")
@@ -269,15 +160,11 @@ func TestParseKVStreamMetric(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Fatalf("Didn't parse 1 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != METRIC {
-		t.Errorf("Type not a metric")
-	}
+	assert.Equal(t, uint32(METRIC), m.GetType())
 
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
@@ -292,15 +179,11 @@ func TestParseKVStreamTrace(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Fatalf("Didn't parse 1 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != TRACE {
-		t.Errorf("Type not a trace")
-	}
+	assert.Equal(t, uint32(TRACE), m.GetType())
 
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
@@ -315,15 +198,11 @@ func TestParseKVStreamAudit(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Fatalf("Didn't parse 1 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
-	if m.GetType() != AUDIT {
-		t.Errorf("Type not a trace")
-	}
+	assert.Equal(t, uint32(AUDIT), m.GetType())
 
 	checkInt(t, m, "id", 1)
 	checkInt(t, m, "size", 171)
@@ -341,9 +220,7 @@ func TestParseKVWithBare(t *testing.T) {
 
 	Glue(parser, &mbuf)
 
-	if len(mbuf.Messages) != 3 {
-		t.Fatalf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 3, len(mbuf.Messages))
 
 	m := mbuf.Messages[1]
 
@@ -358,15 +235,11 @@ func TestParseKVStreamPreStamped(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
-	if m.GetTimestamp().Label() != "@40000000521BBC7D163ED116" {
-		t.Errorf("Timestamp didn't parse correctly")
-	}
+	assert.Equal(t, "@40000000521BBC7D163ED116", m.GetTimestamp().Label())
 }
 
 func TestMessageKVString(t *testing.T) {
@@ -377,17 +250,13 @@ func TestMessageKVString(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
 	kv := m.KVString()
 
-	if kv != "> @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"" {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, "> @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"", kv)
 }
 
 func TestMessageKVStringTimestamp(t *testing.T) {
@@ -398,9 +267,7 @@ func TestMessageKVStringTimestamp(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
@@ -408,9 +275,7 @@ func TestMessageKVStringTimestamp(t *testing.T) {
 
 	exc := "> " + m.GetTimestamp().Label() + " id=1 time=:1.001 for=\"-\""
 
-	if kv != exc {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, exc, kv)
 }
 
 func TestMessageKVStringMetric(t *testing.T) {
@@ -421,17 +286,13 @@ func TestMessageKVStringMetric(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
 	kv := m.KVString()
 
-	if kv != ">! @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"" {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, ">! @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"", kv)
 }
 
 func TestMessageKVTrace(t *testing.T) {
@@ -442,17 +303,13 @@ func TestMessageKVTrace(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 2 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
 	kv := m.KVString()
 
-	if kv != ">$ @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"" {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, ">$ @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\"", kv)
 }
 
 func TestMessageKVStringIncludeTags(t *testing.T) {
@@ -463,17 +320,13 @@ func TestMessageKVStringIncludeTags(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 1 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
 	kv := m.KVString()
 
-	if kv != "> @40000000521BBC7D163ED116 [region=\"us-west-1\"] id=1 time=:1.001 for=\"-\"" {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, "> @40000000521BBC7D163ED116 [region=\"us-west-1\"] id=1 time=:1.001 for=\"-\"", kv)
 }
 
 func TestMessageKVStringIncludeValuelessTags(t *testing.T) {
@@ -484,17 +337,13 @@ func TestMessageKVStringIncludeValuelessTags(t *testing.T) {
 
 	ParseKVStream(buf, &mbuf)
 
-	if len(mbuf.Messages) != 1 {
-		t.Errorf("Didn't parse 1 message: %d", len(mbuf.Messages))
-	}
+	assert.Equal(t, 1, len(mbuf.Messages))
 
 	m := mbuf.Messages[0]
 
 	kv := m.KVString()
 
-	if kv != "> @40000000521BBC7D163ED116 [region=\"us-west-1\" !secure] id=1 time=:1.001 for=\"-\"" {
-		t.Errorf("KVString didn't output proper format: '%s'", kv)
-	}
+	assert.Equal(t, "> @40000000521BBC7D163ED116 [region=\"us-west-1\" !secure] id=1 time=:1.001 for=\"-\"", kv)
 }
 
 func TestAddSlice(t *testing.T) {
