@@ -1,161 +1,198 @@
 package cypress
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io"
+	"time"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/vektra/tai64n"
 )
 
-func (attr Attribute) MarshalJSON() ([]byte, error) {
-	var key string
-
-	key = attr.StringKey()
-
-	switch {
-	case attr.Ival != nil:
-		return []byte(fmt.Sprintf("{ \"%s\": %d }", key, *attr.Ival)), nil
-	case attr.Fval != nil:
-		return []byte(fmt.Sprintf("{ \"%s\": %f }", key, *attr.Fval)), nil
-	case attr.Sval != nil:
-		v, err := json.Marshal(attr.Sval)
-		if err != nil {
-			return nil, err
-		}
-
-		return []byte(fmt.Sprintf("{ \"%s\": %s }", key, v)), nil
-	case attr.Bval != nil:
-		v, err := json.Marshal(attr.Bval)
-		if err != nil {
-			return nil, err
-		}
-
-		// The value for _bytes would naturally be true, but we want to keep
-		// the literal as a pure map[string]string so we use an empty string.
-		// It's just the presence of _bytes that matters anyway
-		return []byte(fmt.Sprintf("{ \"%s\": %s, \"_bytes\": \"\" }", key, string(v))), nil
-	case attr.Tval != nil:
-		v, err := json.Marshal(attr.Tval)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return []byte(fmt.Sprintf("{ \"%s\": %s }", key, v)), nil
-	default:
-		return []byte(fmt.Sprintf("{ \"%s\": 1 }", key)), nil
-	}
+func (m *Message) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.SimpleJSONMap())
 }
 
-func (attr *Attribute) UnmarshalJSON(data []byte) error {
-	// Order is arbitrary. We don't parse as maps to interfaces to avoid floaty ints.
-	parsers := [](func([]byte) (*Attribute, error)){
-		parseIntMap,
-		parseStringMap,
-		parseIntervalMap,
+func (m *Message) UnmarshalJSON(data []byte) error {
+	m2, err := ParseSimpleJSON(data)
+	if err != nil {
+		return err
 	}
 
-	// TODO(kev): Probably not worth it, but if parsing becomes a bottleneck
-	//            we can toss these into goroutines and just grab the first one
-	//            that comes back without error
-	for _, parser := range parsers {
-		if parsed, err := parser(data); err == nil {
-			*attr = *parsed
-			return nil
-		}
-	}
+	*m = *m2
 
-	return errors.New("Unable to parse json")
+	return err
 }
 
-func parseIntMap(data []byte) (*Attribute, error) {
-	var intMap map[string]int64
+func ParseSimpleJSON(data []byte) (*Message, error) {
+	m := &Message{}
 
-	err := json.Unmarshal(data, &intMap)
+	var p map[string]interface{}
 
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
+	err := dec.Decode(&p)
 	if err != nil {
 		return nil, err
 	}
 
-	var out Attribute
-
-	for k, v := range intMap {
-		if idx, ok := PresetKeys[k]; ok {
-			out.Key = idx
-		} else {
-			out.Skey = &k
-		}
-
-		out.Ival = &v
-		break
-	}
-
-	return &out, nil
-}
-
-func parseStringMap(data []byte) (*Attribute, error) {
-	var raw map[string]string
-
-	err := json.Unmarshal(data, &raw)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var out Attribute
-
-	for k, v := range raw {
-		if k == "_bytes" {
-			continue
-		}
-
-		if idx, ok := PresetKeys[k]; ok {
-			out.Key = idx
-		} else {
-			out.Skey = &k
-		}
-
-		_, bytes := raw["_bytes"]
-
-		if bytes {
-			b, err := base64.StdEncoding.DecodeString(v)
-			if err != nil {
-				return nil, err
+	for key, val := range p {
+		switch key {
+		case "@version":
+			// skip
+		case "@type":
+			if str, ok := val.(string); ok {
+				switch str {
+				case "metric":
+					m.Type = proto.Uint32(METRIC)
+				case "trace":
+					m.Type = proto.Uint32(TRACE)
+				case "audit":
+					m.Type = proto.Uint32(AUDIT)
+				}
 			}
-			out.Bval = b
-		} else {
-			out.Sval = &v
+
+		case "@timestamp":
+			if str, ok := val.(string); ok {
+				ts, err := time.Parse(time.RFC3339Nano, str)
+				if err != nil {
+					return nil, err
+				}
+
+				m.Timestamp = tai64n.FromTime(ts)
+			}
+		case "@tags":
+			if tm, ok := val.(map[string]interface{}); ok {
+				for tkey, tiv := range tm {
+					tval, vok := tiv.(string)
+
+					if vok {
+						if tval == "true" {
+							m.Tags = append(m.Tags, &Tag{Name: tkey})
+						} else {
+							m.Tags = append(m.Tags, &Tag{Name: tkey, Value: &tval})
+						}
+					}
+				}
+			}
+		default:
+			if num, ok := val.(json.Number); ok {
+				i, err := num.Int64()
+				if err == nil {
+					m.AddInt(key, i)
+				} else {
+					f, err := num.Float64()
+					if err != nil {
+						return nil, err
+					}
+
+					m.AddFloat(key, f)
+				}
+			} else {
+				if imap, ok := val.(map[string]interface{}); ok {
+					fsec, sok := imap["seconds"].(json.Number)
+					nsec, nok := imap["nanoseconds"].(json.Number)
+
+					if sok && nok {
+						pfsec, err := fsec.Int64()
+						if err != nil {
+							return nil, ErrInvalidMessage
+						}
+
+						pnsec, err := nsec.Int64()
+						if err != nil {
+							return nil, ErrInvalidMessage
+						}
+
+						m.AddInterval(key, uint64(pfsec), uint32(pnsec))
+					} else {
+						sval, ok := imap["bytes"].(string)
+						if ok {
+							bytes, err := base64.StdEncoding.DecodeString(sval)
+							if err != nil {
+								return nil, ErrInvalidMessage
+							}
+
+							m.AddBytes(key, bytes)
+						} else {
+							return nil, ErrInvalidMessage
+						}
+					}
+				} else {
+					m.Add(key, val)
+				}
+			}
 		}
-		break
 	}
 
-	return &out, nil
+	if m.Type == nil {
+		m.Type = proto.Uint32(LOG)
+	}
+
+	if m.Timestamp == nil {
+		m.Timestamp = tai64n.Now()
+	}
+
+	return m, nil
 }
 
-func parseIntervalMap(data []byte) (*Attribute, error) {
-	var tvalMap map[string]*Interval
-
-	err := json.Unmarshal(data, &tvalMap)
-
-	if err != nil {
-		return nil, err
+func (m *Message) SimpleJSONMap() map[string]interface{} {
+	p := map[string]interface{}{
+		"@timestamp": m.Timestamp.Time().Format(time.RFC3339Nano),
+		"@type":      m.StringType(),
+		"@version":   "1", // make this compatible with logstash
 	}
 
-	var out Attribute
+	if len(m.Tags) > 0 {
+		tags := map[string]string{}
 
-	for k, v := range tvalMap {
-		if idx, ok := PresetKeys[k]; ok {
-			out.Key = idx
-		} else {
-			out.Skey = &k
+		for _, tag := range m.Tags {
+			var val string
+
+			if tag.Value == nil {
+				val = "true"
+			} else {
+				val = tag.GetValue()
+			}
+
+			tags[tag.Name] = val
 		}
 
-		out.Tval = v
-		break
+		p["@tags"] = tags
 	}
 
-	return &out, nil
+	for _, attr := range m.Attributes {
+		var val interface{}
+
+		switch {
+		case attr.Ival != nil:
+			val = *attr.Ival
+		case attr.Fval != nil:
+			val = *attr.Fval
+		case attr.Boolval != nil:
+			val = *attr.Boolval
+		case attr.Sval != nil:
+			val = *attr.Sval
+		case attr.Bval != nil:
+			val = map[string][]byte{
+				"bytes": attr.Bval,
+			}
+		case attr.Tval != nil:
+			val = map[string]uint64{
+				"seconds":     attr.Tval.GetSeconds(),
+				"nanoseconds": uint64(attr.Tval.GetNanoseconds()),
+			}
+		default:
+			val = true
+		}
+
+		p[attr.StringKey()] = val
+	}
+
+	return p
 }
 
 type JsonStream struct {

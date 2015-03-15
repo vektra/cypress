@@ -115,6 +115,12 @@ func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 			buf.WriteString(strconv.FormatInt(*attr.Ival, 10))
 		case attr.Fval != nil:
 			buf.WriteString(strconv.FormatFloat(*attr.Fval, 'g', -1, 64))
+		case attr.Boolval != nil:
+			if *attr.Boolval {
+				buf.WriteString("true")
+			} else {
+				buf.WriteString("false")
+			}
 		case attr.Sval != nil:
 			buf.WriteString("\"")
 			buf.WriteString(strquote(*attr.Sval))
@@ -447,6 +453,28 @@ type Inter interface {
 
 type Stringer interface {
 	String() string
+}
+
+func (m *Message) AddTag(key string, val string) {
+	var tag *Tag
+
+	for _, t := range m.Tags {
+		if t.Name == key {
+			tag = t
+			break
+		}
+	}
+
+	if tag == nil {
+		tag = &Tag{Name: key}
+		m.Tags = append(m.Tags, tag)
+	}
+
+	if val == "" {
+		tag.Value = nil
+	} else {
+		tag.Value = &val
+	}
 }
 
 func (m *Message) Add(key string, val interface{}) error {

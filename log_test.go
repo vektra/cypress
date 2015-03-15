@@ -40,12 +40,10 @@ func TestJsonBytes(t *testing.T) {
 	var om Message
 
 	err = json.Unmarshal(b, &om)
+	require.NoError(t, err)
 
-	if err != nil {
-		panic(err)
-	}
-
-	b2, err := json.Marshal(om)
+	b2, err := json.Marshal(&om)
+	require.NoError(t, err)
 
 	if !bytes.Equal(b, b2) {
 		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
@@ -82,7 +80,7 @@ func TestJsonInterval(t *testing.T) {
 		t.Errorf("time didn't roundtrip")
 	}
 
-	b2, err := json.Marshal(om)
+	b2, err := json.Marshal(&om)
 
 	if !bytes.Equal(b, b2) {
 		t.Errorf("Roundtrip through json failed: '%s' != '%s'", string(b), string(b2))
