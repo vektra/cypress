@@ -152,6 +152,9 @@ restart:
 	case '*':
 		scan.Next()
 		m.Type = proto.Uint32(AUDIT)
+	case '?':
+		scan.Next()
+		m.Type = proto.Uint32(HEARTBEAT)
 	}
 
 	if scan.Next() != ' ' {

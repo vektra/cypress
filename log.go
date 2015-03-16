@@ -33,6 +33,7 @@ const LOG = 0
 const METRIC = 1
 const TRACE = 2
 const AUDIT = 3
+const HEARTBEAT = 4
 
 func Log() *Message {
 	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(LOG)}
@@ -50,6 +51,10 @@ func Audit() *Message {
 	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(AUDIT)}
 }
 
+func Heartbeat() *Message {
+	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(HEARTBEAT)}
+}
+
 func (m *Message) StringType() string {
 	switch m.GetType() {
 	case LOG:
@@ -60,6 +65,8 @@ func (m *Message) StringType() string {
 		return "trace"
 	case AUDIT:
 		return "audit"
+	case HEARTBEAT:
+		return "heartbeat"
 	default:
 		return "unknown"
 	}
@@ -155,6 +162,8 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 		buf.WriteString("$ ")
 	case m.GetType() == AUDIT:
 		buf.WriteString("* ")
+	case m.GetType() == HEARTBEAT:
+		buf.WriteString("? ")
 	default:
 		buf.WriteString(" ")
 	}
@@ -293,6 +302,8 @@ func (m *Message) HumanString() string {
 		buf.WriteString("$ ")
 	} else if m.GetType() == AUDIT {
 		buf.WriteString("* ")
+	} else if m.GetType() == HEARTBEAT {
+		buf.WriteString("? ")
 	} else {
 		buf.WriteString(" ")
 	}

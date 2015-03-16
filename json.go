@@ -52,6 +52,8 @@ func ParseSimpleJSON(data []byte) (*Message, error) {
 					m.Type = proto.Uint32(TRACE)
 				case "audit":
 					m.Type = proto.Uint32(AUDIT)
+				case "heartbeat":
+					m.Type = proto.Uint32(HEARTBEAT)
 				}
 			}
 

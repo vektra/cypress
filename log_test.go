@@ -209,6 +209,24 @@ func TestParseKVStreamAudit(t *testing.T) {
 	checkStr(t, m, "for", "-")
 }
 
+func TestParseKVStreamHeartbeat(t *testing.T) {
+	line := ">? [host=\"foo\"]"
+
+	buf := bytes.NewReader([]byte(line))
+	var mbuf MessageBuffer
+
+	ParseKVStream(buf, &mbuf)
+
+	assert.Equal(t, 1, len(mbuf.Messages))
+
+	m := mbuf.Messages[0]
+
+	assert.Equal(t, uint32(HEARTBEAT), m.GetType())
+
+	assert.Equal(t, "host", m.Tags[0].Name)
+	assert.Equal(t, "foo", m.Tags[0].GetValue())
+}
+
 func TestParseKVWithBare(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\nerror bad stuff\n> id=1 size=171 for=\"-\""
 
