@@ -50,6 +50,22 @@ func TestParseKV(t *testing.T) {
 	checkFloat(t, m, "proc", 3.251)
 }
 
+func TestParseKVWithStrangeKeys(t *testing.T) {
+	line := `> [host.name="foo" "remote.addr"="xyz"] key.id=1 "remote.host"="10.1.42.1"`
+
+	m, err := ParseKV(line)
+	require.NoError(t, err)
+
+	assert.Equal(t, "host.name", m.Tags[0].Name)
+	assert.Equal(t, "foo", m.Tags[0].GetValue())
+
+	assert.Equal(t, "remote.addr", m.Tags[1].Name)
+	assert.Equal(t, "xyz", m.Tags[1].GetValue())
+
+	checkInt(t, m, "key.id", 1)
+	checkStr(t, m, "remote.host", "10.1.42.1")
+}
+
 func TestParseKVSeconds(t *testing.T) {
 	line := `> id=1 remote="10.1.42.1" time=:1377377621.034 method=GET request="/test" size=171 proc=:0.000 status=200 body=157 for="-"`
 

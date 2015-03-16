@@ -229,11 +229,27 @@ restart:
 				continue
 			}
 
-			if tok != scanner.Ident {
+			switch tok {
+			case scanner.Ident:
+				name = scan.TokenText()
+
+				for scan.Peek() == '.' {
+					scan.Scan()
+
+					tok = scan.Scan()
+
+					if tok != scanner.Ident {
+						goto badtag
+					}
+
+					name = name + "." + scan.TokenText()
+				}
+			case scanner.String, scanner.RawString:
+				name = scan.TokenText()
+				name = name[1 : len(name)-1]
+			default:
 				goto badtag
 			}
-
-			name = scan.TokenText()
 
 			tok = scan.Scan()
 
@@ -277,11 +293,27 @@ restart:
 
 		tok = scan.Scan()
 
-		if tok != scanner.Ident {
+		switch tok {
+		case scanner.Ident:
+			key = scan.TokenText()
+
+			for scan.Peek() == '.' {
+				scan.Scan()
+
+				tok = scan.Scan()
+
+				if tok != scanner.Ident {
+					goto bad
+				}
+
+				key = key + "." + scan.TokenText()
+			}
+		case scanner.String, scanner.RawString:
+			key = scan.TokenText()
+			key = key[1 : len(key)-1]
+		default:
 			goto bad
 		}
-
-		key = scan.TokenText()
 
 		if scan.Scan() != '=' {
 			goto bad
