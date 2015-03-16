@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/commands"
-	"github.com/vektra/cypress/plugin"
 )
 
 type CatCommand struct {
@@ -52,22 +52,12 @@ func (c *CatCommand) Execute(args []string) error {
 		format = commands.NATIVE
 	}
 
-	dir := args[0]
-	if dir == "" {
-		return fmt.Errorf("no source specified")
-	}
-
-	spool, err := plugin.NewSpool(dir)
+	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
 		return err
 	}
 
-	gen, err := spool.Generator()
-	if err != nil {
-		return err
-	}
-
-	cat, err := commands.NewCat(os.Stdout, gen, format)
+	cat, err := commands.NewCat(os.Stdout, dec, format)
 	if err != nil {
 		return err
 	}
@@ -85,7 +75,7 @@ func (c *CatCommand) Execute(args []string) error {
 }
 
 func init() {
-	long := `Given a source of messages, the cat command will read those messages in and print them out. Commonly, users point cat at a spool directory to read the message contained within.`
+	long := `Given a stream on stdin, the cat command will read those messages in and print them out.`
 
 	addCommand("cat", "display messages", long, &CatCommand{})
 }
