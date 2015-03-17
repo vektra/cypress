@@ -27,7 +27,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 }
 
 func ParseSimpleJSON(data []byte) (*Message, error) {
-	m := &Message{}
+	m := &Message{Version: DEFAULT_VERSION}
 
 	var p map[string]interface{}
 
@@ -191,7 +191,7 @@ func (m *Message) SimpleJSONMap() map[string]interface{} {
 			val = true
 		}
 
-		p[attr.StringKey()] = val
+		p[attr.StringKey(m)] = val
 	}
 
 	return p
@@ -212,6 +212,8 @@ func (js *JsonStream) Parse() error {
 		if err != nil {
 			return err
 		}
+
+		m.Version = DEFAULT_VERSION
 
 		js.Out.Receive(m)
 	}

@@ -91,7 +91,7 @@ func decodeNative(d *Decoder) (*Message, error) {
 		return nil, err
 	}
 
-	m := &Message{}
+	m := &Message{Version: DEFAULT_VERSION}
 
 	err = m.Unmarshal(sbuf)
 
@@ -115,6 +115,8 @@ func decodeJSON(d *Decoder) (*Message, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	m.Version = DEFAULT_VERSION
 
 	return m, nil
 }

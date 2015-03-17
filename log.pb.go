@@ -190,6 +190,7 @@ func (m *Tag) GetValue() string {
 }
 
 type Message struct {
+	Version          int32          `protobuf:"varint,6,opt,name=version" json:"version" codec:"version"`
 	Timestamp        *tai64n.TAI64N `protobuf:"bytes,1,req,name=timestamp" json:"timestamp,omitempty" codec:"timestamp"`
 	Type             *uint32        `protobuf:"varint,2,req,name=type" json:"type,omitempty" codec:"type"`
 	Attributes       []*Attribute   `protobuf:"bytes,3,rep,name=attributes" json:"attributes,omitempty" codec:"attributes"`
@@ -201,6 +202,13 @@ type Message struct {
 func (m *Message) Reset()         { *m = Message{} }
 func (m *Message) String() string { return proto.CompactTextString(m) }
 func (*Message) ProtoMessage()    {}
+
+func (m *Message) GetVersion() int32 {
+	if m != nil {
+		return m.Version
+	}
+	return 0
+}
 
 func (m *Message) GetTimestamp() *tai64n.TAI64N {
 	if m != nil {
@@ -643,6 +651,21 @@ func (m *Message) Unmarshal(data []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		switch fieldNum {
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				m.Version |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Timestamp", wireType)
@@ -902,6 +925,7 @@ func (m *Tag) Size() (n int) {
 func (m *Message) Size() (n int) {
 	var l int
 	_ = l
+	n += 1 + sovLog(uint64(m.Version))
 	if m.Timestamp != nil {
 		l = m.Timestamp.Size()
 		n += 1 + l + sovLog(uint64(l))
@@ -1101,6 +1125,9 @@ func (m *Message) MarshalTo(data []byte) (n int, err error) {
 	_ = i
 	var l int
 	_ = l
+	data[i] = 0x30
+	i++
+	i = encodeVarintLog(data, i, uint64(m.Version))
 	if m.Timestamp != nil {
 		data[i] = 0xa
 		i++
@@ -1519,6 +1546,9 @@ func (this *Message) VerboseEqual(that interface{}) error {
 	} else if this == nil {
 		return fmt.Errorf("that is type *Messagebut is not nil && this == nil")
 	}
+	if this.Version != that1.Version {
+		return fmt.Errorf("Version this(%v) Not Equal that(%v)", this.Version, that1.Version)
+	}
 	if !this.Timestamp.Equal(that1.Timestamp) {
 		return fmt.Errorf("Timestamp this(%v) Not Equal that(%v)", this.Timestamp, that1.Timestamp)
 	}
@@ -1579,6 +1609,9 @@ func (this *Message) Equal(that interface{}) bool {
 		}
 		return false
 	} else if this == nil {
+		return false
+	}
+	if this.Version != that1.Version {
 		return false
 	}
 	if !this.Timestamp.Equal(that1.Timestamp) {

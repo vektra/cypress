@@ -214,6 +214,7 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 	typ := uint32(cypress.LOG)
 
 	m := &cypress.Message{
+		Version:   cypress.DEFAULT_VERSION,
 		Type:      &typ,
 		Timestamp: tai64n.FromTime(ts),
 	}

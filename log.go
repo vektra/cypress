@@ -17,42 +17,36 @@ import (
 	"github.com/vektra/tai64n"
 )
 
-var PresetKeys = map[string]uint32{
-	"message": 1,
-	"value":   2,
-	"source":  3,
-}
-
-var PresetKeysFromIndex = map[uint32]string{
-	1: "message",
-	2: "value",
-	3: "source",
-}
-
 const LOG = 0
 const METRIC = 1
 const TRACE = 2
 const AUDIT = 3
 const HEARTBEAT = 4
 
+const DEFAULT_VERSION = 1
+
+func NewMessage() *Message {
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now()}
+}
+
 func Log() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(LOG)}
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(LOG)}
 }
 
 func Metric() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(METRIC)}
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(METRIC)}
 }
 
 func Trace() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(TRACE)}
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(TRACE)}
 }
 
 func Audit() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(AUDIT)}
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(AUDIT)}
 }
 
 func Heartbeat() *Message {
-	return &Message{Timestamp: tai64n.Now(), Type: proto.Uint32(HEARTBEAT)}
+	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(HEARTBEAT)}
 }
 
 func (m *Message) StringType() string {
@@ -114,7 +108,7 @@ func (m *Message) KVPairs() string {
 func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 	for _, attr := range m.Attributes {
 		buf.WriteString(" ")
-		buf.WriteString(attr.StringKey())
+		buf.WriteString(attr.StringKey(m))
 		buf.WriteString("=")
 
 		switch {
@@ -324,9 +318,9 @@ func (m *Message) HumanString() string {
 	return buf.String()
 }
 
-func (a *Attribute) StringKey() string {
+func (a *Attribute) StringKey(m *Message) string {
 	if a.Key != 0 {
-		return PresetKeysFromIndex[a.Key]
+		return versionSymbols[m.Version].FromIndex(a.Key)
 	}
 
 	if a.Skey == nil {
@@ -338,7 +332,7 @@ func (a *Attribute) StringKey() string {
 
 func (m *Message) Get(key string) (interface{}, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Ival != nil {
 				return *attr.Ival, true
 			}
@@ -370,7 +364,7 @@ func (m *Message) Get(key string) (interface{}, bool) {
 
 func (m *Message) GetInt(key string) (int64, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Ival == nil {
 				return 0, false
 			}
@@ -384,7 +378,7 @@ func (m *Message) GetInt(key string) (int64, bool) {
 
 func (m *Message) GetFloat(key string) (float64, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Fval == nil {
 				return 0, false
 			}
@@ -398,7 +392,7 @@ func (m *Message) GetFloat(key string) (float64, bool) {
 
 func (m *Message) GetString(key string) (string, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Sval == nil {
 				return "", false
 			}
@@ -412,7 +406,7 @@ func (m *Message) GetString(key string) (string, bool) {
 
 func (m *Message) GetBytes(key string) ([]byte, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Bval == nil {
 				return nil, false
 			}
@@ -426,7 +420,7 @@ func (m *Message) GetBytes(key string) ([]byte, bool) {
 
 func (m *Message) GetInterval(key string) (*Interval, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Tval == nil {
 				return nil, false
 			}
@@ -440,7 +434,7 @@ func (m *Message) GetInterval(key string) (*Interval, bool) {
 
 func (m *Message) GetBool(key string) (bool, bool) {
 	for _, attr := range m.Attributes {
-		if attr.StringKey() == key {
+		if attr.StringKey(m) == key {
 			if attr.Boolval == nil {
 				return false, false
 			}
@@ -505,7 +499,7 @@ func (m *Message) GetTag(key string) (string, bool) {
 func (m *Message) Add(key string, val interface{}) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
+	if val, ok := versionSymbols[m.Version].FindIndex(key); ok {
 		attr.Key = val
 	} else {
 		attr.Skey = &key
@@ -651,15 +645,18 @@ func (m *Message) AddMany(vals ...interface{}) error {
 	return nil
 }
 
-func (m *Message) AddInt(key string, val int64) error {
-	attr := &Attribute{}
-
-	if val, ok := PresetKeys[key]; ok {
+func (attr *Attribute) SetKey(m *Message, key string) {
+	if val, ok := versionSymbols[m.Version].FindIndex(key); ok {
 		attr.Key = val
 	} else {
 		attr.Skey = &key
 	}
+}
 
+func (m *Message) AddInt(key string, val int64) error {
+	attr := &Attribute{}
+
+	attr.SetKey(m, key)
 	attr.Ival = &val
 
 	m.Attributes = append(m.Attributes, attr)
@@ -669,12 +666,7 @@ func (m *Message) AddInt(key string, val int64) error {
 func (m *Message) AddFloat(key string, val float64) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
-		attr.Key = val
-	} else {
-		attr.Skey = &key
-	}
-
+	attr.SetKey(m, key)
 	attr.Fval = &val
 
 	m.Attributes = append(m.Attributes, attr)
@@ -684,12 +676,7 @@ func (m *Message) AddFloat(key string, val float64) error {
 func (m *Message) AddString(key string, val string) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
-		attr.Key = val
-	} else {
-		attr.Skey = &key
-	}
-
+	attr.SetKey(m, key)
 	attr.Sval = &val
 
 	m.Attributes = append(m.Attributes, attr)
@@ -699,12 +686,7 @@ func (m *Message) AddString(key string, val string) error {
 func (m *Message) AddBytes(key string, val []byte) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
-		attr.Key = val
-	} else {
-		attr.Skey = &key
-	}
-
+	attr.SetKey(m, key)
 	attr.Bval = val
 
 	m.Attributes = append(m.Attributes, attr)
@@ -714,12 +696,7 @@ func (m *Message) AddBytes(key string, val []byte) error {
 func (m *Message) AddInterval(key string, sec uint64, nsec uint32) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
-		attr.Key = val
-	} else {
-		attr.Skey = &key
-	}
-
+	attr.SetKey(m, key)
 	iv := &Interval{
 		Seconds:     sec,
 		Nanoseconds: nsec,
@@ -751,12 +728,7 @@ func (i *Interval) Duration() time.Duration {
 func (m *Message) AddDuration(key string, dur time.Duration) error {
 	attr := &Attribute{}
 
-	if val, ok := PresetKeys[key]; ok {
-		attr.Key = val
-	} else {
-		attr.Skey = &key
-	}
-
+	attr.SetKey(m, key)
 	attr.Tval = durationToInterval(dur)
 
 	m.Attributes = append(m.Attributes, attr)
