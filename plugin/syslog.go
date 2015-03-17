@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"net"
 	"strconv"
@@ -158,6 +159,12 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 		sub, err := buf.Peek(tsFmtLen)
 		if err != nil {
 			return nil, err
+		}
+
+		if !strings.Contains(tsFmt, " ") {
+			if idx := bytes.IndexByte(sub, ' '); idx != -1 {
+				sub = sub[:idx]
+			}
 		}
 
 		ts, err = time.Parse(tsFmt, string(sub))

@@ -70,6 +70,15 @@ func TestSyslog(t *testing.T) {
 		assert.Equal(t, "this is from golang tests", msg)
 	})
 
+	n.It("can parse a message when the timestamp is shorter than the format", func() {
+		line := "<14>2015-03-16T12:10:52Z zero.local test[64480]: this is from golang tests\n"
+
+		buf := bufio.NewReader(strings.NewReader(line))
+
+		_, err := parseSyslog(buf)
+		require.NoError(t, err)
+	})
+
 	n.It("accepts data via a unix diagram socket and creates messages", func() {
 		path := filepath.Join(tmpdir, "devlog")
 		var buf cypress.BufferReceiver
