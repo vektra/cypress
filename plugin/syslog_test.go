@@ -85,11 +85,19 @@ func TestSyslog(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sl.Run()
+			err := sl.Run()
+			if err != nil {
+				if !strings.Contains(err.Error(), "closed") {
+					t.Fatalf("error running: %s", err)
+				}
+			}
 		}()
 
-		sw.Info("this is from golang tests")
-		sw.Close()
+		err = sw.Info("this is from golang tests")
+		require.NoError(t, err)
+
+		err = sw.Close()
+		require.NoError(t, err)
 
 		time.Sleep(1 * time.Second)
 
