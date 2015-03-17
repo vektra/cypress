@@ -91,7 +91,7 @@ func TestSyslog(t *testing.T) {
 		sw.Info("this is from golang tests")
 		sw.Close()
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 
 		sl.Stop()
 
