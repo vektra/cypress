@@ -18,12 +18,16 @@ func NewStreamEncoder(w io.Writer) *StreamEncoder {
 var StreamNotifyByte = []byte{'-'}
 
 func (s *StreamEncoder) WriteHeader(comp StreamHeader_Compression) error {
+	hdr := &StreamHeader{Compression: comp.Enum()}
+
+	return s.WriteCustomHeader(hdr)
+}
+
+func (s *StreamEncoder) WriteCustomHeader(hdr *StreamHeader) error {
 	_, err := s.w.Write(StreamNotifyByte)
 	if err != nil {
 		return err
 	}
-
-	hdr := &StreamHeader{Compression: comp.Enum()}
 
 	data, err := hdr.Marshal()
 	if err != nil {
@@ -36,18 +40,17 @@ func (s *StreamEncoder) WriteHeader(comp StreamHeader_Compression) error {
 	}
 
 	_, err = s.w.Write(data)
-	return err
-}
-
-func (s *StreamEncoder) Init(comp StreamHeader_Compression) error {
-	err := s.WriteHeader(comp)
 	if err != nil {
 		return err
 	}
 
-	s.enc = NewEncoder(WriteCompressed(s.w, comp))
+	s.enc = NewEncoder(WriteCompressed(s.w, hdr.GetCompression()))
 
 	return nil
+}
+
+func (s *StreamEncoder) Init(comp StreamHeader_Compression) error {
+	return s.WriteHeader(comp)
 }
 
 func (s *StreamEncoder) OpenFile(f *os.File) error {

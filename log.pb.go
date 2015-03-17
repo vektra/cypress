@@ -69,6 +69,39 @@ func (x *StreamHeader_Compression) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type StreamHeader_Mode int32
+
+const (
+	StreamHeader_RAW      StreamHeader_Mode = 0
+	StreamHeader_RELIABLE StreamHeader_Mode = 1
+)
+
+var StreamHeader_Mode_name = map[int32]string{
+	0: "RAW",
+	1: "RELIABLE",
+}
+var StreamHeader_Mode_value = map[string]int32{
+	"RAW":      0,
+	"RELIABLE": 1,
+}
+
+func (x StreamHeader_Mode) Enum() *StreamHeader_Mode {
+	p := new(StreamHeader_Mode)
+	*p = x
+	return p
+}
+func (x StreamHeader_Mode) String() string {
+	return proto.EnumName(StreamHeader_Mode_name, int32(x))
+}
+func (x *StreamHeader_Mode) UnmarshalJSON(data []byte) error {
+	value, err := proto.UnmarshalJSONEnum(StreamHeader_Mode_value, data, "StreamHeader_Mode")
+	if err != nil {
+		return err
+	}
+	*x = StreamHeader_Mode(value)
+	return nil
+}
+
 type Interval struct {
 	Seconds          uint64 `protobuf:"varint,1,req,name=seconds" json:"seconds" codec:"seconds"`
 	Nanoseconds      uint32 `protobuf:"varint,2,req,name=nanoseconds" json:"nanoseconds" codec:"nanoseconds"`
@@ -246,7 +279,8 @@ func (m *Message) GetTags() []*Tag {
 }
 
 type StreamHeader struct {
-	Compression      *StreamHeader_Compression `protobuf:"varint,1,req,name=compression,enum=cypress.StreamHeader_Compression" json:"compression,omitempty"`
+	Compression      *StreamHeader_Compression `protobuf:"varint,1,opt,name=compression,enum=cypress.StreamHeader_Compression" json:"compression,omitempty"`
+	Mode             *StreamHeader_Mode        `protobuf:"varint,2,opt,name=mode,enum=cypress.StreamHeader_Mode" json:"mode,omitempty"`
 	XXX_unrecognized []byte                    `json:"-" codec:"-"`
 }
 
@@ -261,8 +295,16 @@ func (m *StreamHeader) GetCompression() StreamHeader_Compression {
 	return StreamHeader_NONE
 }
 
+func (m *StreamHeader) GetMode() StreamHeader_Mode {
+	if m != nil && m.Mode != nil {
+		return *m.Mode
+	}
+	return StreamHeader_RAW
+}
+
 func init() {
 	proto.RegisterEnum("cypress.StreamHeader_Compression", StreamHeader_Compression_name, StreamHeader_Compression_value)
+	proto.RegisterEnum("cypress.StreamHeader_Mode", StreamHeader_Mode_name, StreamHeader_Mode_value)
 }
 func (m *Interval) Unmarshal(data []byte) error {
 	l := len(data)
@@ -838,6 +880,23 @@ func (m *StreamHeader) Unmarshal(data []byte) error {
 				}
 			}
 			m.Compression = &v
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Mode", wireType)
+			}
+			var v StreamHeader_Mode
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				v |= (StreamHeader_Mode(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Mode = &v
 		default:
 			var sizeOfWire int
 			for {
@@ -960,6 +1019,9 @@ func (m *StreamHeader) Size() (n int) {
 	_ = l
 	if m.Compression != nil {
 		n += 1 + sovLog(uint64(*m.Compression))
+	}
+	if m.Mode != nil {
+		n += 1 + sovLog(uint64(*m.Mode))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1198,6 +1260,11 @@ func (m *StreamHeader) MarshalTo(data []byte) (n int, err error) {
 		data[i] = 0x8
 		i++
 		i = encodeVarintLog(data, i, uint64(*m.Compression))
+	}
+	if m.Mode != nil {
+		data[i] = 0x10
+		i++
+		i = encodeVarintLog(data, i, uint64(*m.Mode))
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(data[i:], m.XXX_unrecognized)
@@ -1685,6 +1752,15 @@ func (this *StreamHeader) VerboseEqual(that interface{}) error {
 	} else if that1.Compression != nil {
 		return fmt.Errorf("Compression this(%v) Not Equal that(%v)", this.Compression, that1.Compression)
 	}
+	if this.Mode != nil && that1.Mode != nil {
+		if *this.Mode != *that1.Mode {
+			return fmt.Errorf("Mode this(%v) Not Equal that(%v)", *this.Mode, *that1.Mode)
+		}
+	} else if this.Mode != nil {
+		return fmt.Errorf("this.Mode == nil && that.Mode != nil")
+	} else if that1.Mode != nil {
+		return fmt.Errorf("Mode this(%v) Not Equal that(%v)", this.Mode, that1.Mode)
+	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
 	}
@@ -1717,6 +1793,15 @@ func (this *StreamHeader) Equal(that interface{}) bool {
 	} else if this.Compression != nil {
 		return false
 	} else if that1.Compression != nil {
+		return false
+	}
+	if this.Mode != nil && that1.Mode != nil {
+		if *this.Mode != *that1.Mode {
+			return false
+		}
+	} else if this.Mode != nil {
+		return false
+	} else if that1.Mode != nil {
 		return false
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {

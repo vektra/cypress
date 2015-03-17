@@ -50,5 +50,12 @@ message StreamHeader {
     ZLIB = 2;
   }
 
-  required Compression compression = 1;
+  optional Compression compression = 1;
+
+  enum Mode {
+    RAW = 0;
+    RELIABLE = 1;
+  }
+
+  optional Mode mode = 2;
 }
