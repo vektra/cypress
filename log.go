@@ -488,6 +488,20 @@ func (m *Message) AddTag(key string, val string) {
 	}
 }
 
+func (m *Message) GetTag(key string) (string, bool) {
+	for _, t := range m.Tags {
+		if t.Name == key {
+			if t.Value == nil {
+				return "", true
+			}
+
+			return *t.Value, true
+		}
+	}
+
+	return "", false
+}
+
 func (m *Message) Add(key string, val interface{}) error {
 	attr := &Attribute{}
 
