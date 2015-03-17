@@ -9,10 +9,19 @@ type Send struct {
 	rw  io.ReadWriter
 	enc *StreamEncoder
 	buf []byte
+
+	window    int
+	available int
 }
 
-func NewSend(rw io.ReadWriter) *Send {
-	return &Send{rw, NewStreamEncoder(rw), make([]byte, 1)}
+func NewSend(rw io.ReadWriter, window int) *Send {
+	return &Send{
+		rw:        rw,
+		enc:       NewStreamEncoder(rw),
+		buf:       make([]byte, window+1),
+		window:    window,
+		available: window,
+	}
 }
 
 func (s *Send) SendHandshake() error {
@@ -31,13 +40,19 @@ func (s *Send) transmit(m *Message) error {
 var ErrStreamUnsynced = errors.New("stream unsynced")
 
 func (s *Send) readAck() error {
-	_, err := s.rw.Read(s.buf)
+	n, err := s.rw.Read(s.buf)
 	if err != nil {
 		return err
 	}
 
-	if s.buf[0] != 'k' {
-		return ErrStreamUnsynced
+	for i := 0; i < n; i++ {
+		if s.buf[0] != 'k' {
+			return ErrStreamUnsynced
+		}
+	}
+
+	if s.window > 0 {
+		s.available += n
 	}
 
 	return nil
@@ -49,5 +64,11 @@ func (s *Send) Receive(m *Message) error {
 		return err
 	}
 
-	return s.readAck()
+	if s.available == 0 {
+		return s.readAck()
+	}
+
+	s.available--
+
+	return nil
 }

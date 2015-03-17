@@ -40,7 +40,7 @@ func TestSend(t *testing.T) {
 	n.It("sends a handshake header", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		err := s.SendHandshake()
 		require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestSend(t *testing.T) {
 	n.It("writes a message", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		m := Log()
 		m.Add("hello", "world")
@@ -80,7 +80,7 @@ func TestSend(t *testing.T) {
 	n.It("reads an ack from the remote side", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		db.read.WriteString("k")
 
@@ -91,7 +91,7 @@ func TestSend(t *testing.T) {
 	n.It("has readAck return an error if the stream is closed", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		err := s.readAck()
 		require.Equal(t, err, io.EOF)
@@ -100,7 +100,7 @@ func TestSend(t *testing.T) {
 	n.It("has readAck return an error if the stream doesn't have an ack byte", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		db.read.WriteString("c")
 
@@ -111,7 +111,7 @@ func TestSend(t *testing.T) {
 	n.It("sends a message and waits for the ack", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db)
+		s := NewSend(db, 0)
 
 		m := Log()
 		m.Add("hello", "world")
@@ -127,6 +127,33 @@ func TestSend(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, m, m2)
+	})
+
+	n.It("only reads for acks when the available window slots is depleted", func() {
+		db := newDualBuffer()
+
+		s := NewSend(db, 2)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		err := s.Receive(m)
+		require.NoError(t, err)
+
+		assert.Equal(t, s.available, 1)
+
+		err = s.Receive(m)
+		require.NoError(t, err)
+
+		assert.Equal(t, s.available, 0)
+
+		db.read.WriteString("kkk")
+
+		err = s.Receive(m)
+		require.NoError(t, err)
+
+		_, err = db.read.ReadByte()
+		assert.Equal(t, err, io.EOF)
 	})
 
 	n.Meow()

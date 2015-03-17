@@ -14,7 +14,7 @@ func TestRecv(t *testing.T) {
 	n.It("receives messages", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db.Flip())
+		s := NewSend(db.Flip(), 0)
 
 		err := s.SendHandshake()
 		require.NoError(t, err)
@@ -37,7 +37,7 @@ func TestRecv(t *testing.T) {
 	n.It("sends an ack back", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db.Flip())
+		s := NewSend(db.Flip(), 0)
 
 		err := s.SendHandshake()
 		require.NoError(t, err)
@@ -55,7 +55,7 @@ func TestRecv(t *testing.T) {
 	n.It("reads a message and sends an ack", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db.Flip())
+		s := NewSend(db.Flip(), 0)
 
 		err := s.SendHandshake()
 		require.NoError(t, err)
