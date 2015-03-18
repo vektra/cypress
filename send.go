@@ -3,6 +3,8 @@ package cypress
 import (
 	"errors"
 	"io"
+	"sync"
+	"time"
 )
 
 type Send struct {
@@ -11,17 +13,78 @@ type Send struct {
 	buf []byte
 
 	window    int
-	available int
+	available int32
+
+	ackLock sync.Mutex
+	ackCond *sync.Cond
 }
 
+/*
+* Note on window size: to maximize throughput, attempt to make this
+* equation work: t * w = d * 2 or w =  d * 2 / t
+*
+* t = time between generated messages. Ie, if you're generating 1000
+*     messages per second, t = 1ms
+* w = the window size
+* d = the transmission delay of the network
+*
+* So, t = 0.1ms and d = 0.05ms, then w = 2. This is the minimum window
+* size to maximize throughput.
+ */
+
+// Given the transmission delay of the network (t) and the
+// expected messages per second (mps), calculate the minimum
+// window to use to maximize throughput.
+func MinimumSendWindow(d time.Duration, mps int) int {
+	t := time.Duration(mps/1000) * time.Millisecond
+
+	return int((d * 20) / t)
+}
+
+var (
+	// Disable windowing, acknowledge each message immediately
+	NoWindow int = -1
+
+	// An average messages/sec rate to calculate against
+	DefaultMPSRate int = 1000
+
+	// A decent minimum window that assures some improved throughput
+	MinimumWindow = MinimumSendWindow(1*time.Millisecond, DefaultMPSRate)
+
+	// A window for use on a fast lan where transmission delay is very small
+	FastLanWindow = MinimumWindow
+
+	// A window for use on a slower lan (cloud infrastructer, across AZ)
+	SlowLanWindow = MinimumSendWindow(3*time.Millisecond, DefaultMPSRate)
+
+	// A window for use over faster internet paths
+	FastInternetWindow = MinimumSendWindow(10*time.Millisecond, DefaultMPSRate)
+
+	// A window for use over slowe internet paths
+	SlowInternetWindow = MinimumSendWindow(50*time.Millisecond, DefaultMPSRate)
+)
+
 func NewSend(rw io.ReadWriter, window int) *Send {
-	return &Send{
+	switch window {
+	case -1:
+		window = 1
+	case 0:
+		window = MinimumWindow
+	}
+
+	s := &Send{
 		rw:        rw,
 		enc:       NewStreamEncoder(rw),
-		buf:       make([]byte, window+1),
+		buf:       make([]byte, window),
 		window:    window,
-		available: window,
+		available: int32(window),
 	}
+
+	s.ackCond = sync.NewCond(&s.ackLock)
+
+	go s.backgroundAck()
+
+	return s
 }
 
 func (s *Send) SendHandshake() error {
@@ -51,24 +114,41 @@ func (s *Send) readAck() error {
 		}
 	}
 
-	if s.window > 0 {
-		s.available += n
-	}
+	s.ackLock.Lock()
+	s.available += int32(n)
+	s.ackCond.Signal()
+	s.ackLock.Unlock()
 
 	return nil
 }
 
+func (s *Send) backgroundAck() {
+	for {
+		err := s.readAck()
+		if err != nil {
+			if err == io.EOF {
+				return
+			}
+
+			panic(err)
+		}
+	}
+}
+
 func (s *Send) Receive(m *Message) error {
+	s.ackLock.Lock()
+	defer s.ackLock.Unlock()
+
 	err := s.transmit(m)
 	if err != nil {
 		return err
 	}
 
-	if s.available == 0 {
-		return s.readAck()
-	}
-
 	s.available--
+
+	for s.available == 0 {
+		s.ackCond.Wait()
+	}
 
 	return nil
 }

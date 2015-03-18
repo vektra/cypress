@@ -3,7 +3,10 @@ package cypress
 import (
 	"bytes"
 	"io"
+	"os"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,13 +37,43 @@ func (db *dualBuffer) Flip() *dualBuffer {
 	return &dualBuffer{db.write, db.read}
 }
 
+type dualPipes struct {
+	read  *io.PipeReader
+	write *io.PipeWriter
+}
+
+func (db *dualPipes) Read(data []byte) (int, error) {
+	return db.read.Read(data)
+}
+
+func (db *dualPipes) Write(data []byte) (int, error) {
+	return db.write.Write(data)
+}
+
+func newDualPipes() (*dualPipes, *dualPipes) {
+	ar, aw := io.Pipe()
+	br, bw := io.Pipe()
+
+	return &dualPipes{ar, bw}, &dualPipes{br, aw}
+}
+
+func newPair() (*os.File, *os.File) {
+	fd, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_STREAM, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	return os.NewFile(uintptr(fd[0]), "sockepair-1"),
+		os.NewFile(uintptr(fd[1]), "socketpair-2")
+}
+
 func TestSend(t *testing.T) {
 	n := neko.Start(t)
 
 	n.It("sends a handshake header", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		err := s.SendHandshake()
 		require.NoError(t, err)
@@ -61,7 +94,7 @@ func TestSend(t *testing.T) {
 	n.It("writes a message", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		m := Log()
 		m.Add("hello", "world")
@@ -80,7 +113,7 @@ func TestSend(t *testing.T) {
 	n.It("reads an ack from the remote side", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		db.read.WriteString("k")
 
@@ -91,7 +124,7 @@ func TestSend(t *testing.T) {
 	n.It("has readAck return an error if the stream is closed", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		err := s.readAck()
 		require.Equal(t, err, io.EOF)
@@ -100,7 +133,7 @@ func TestSend(t *testing.T) {
 	n.It("has readAck return an error if the stream doesn't have an ack byte", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		db.read.WriteString("c")
 
@@ -111,7 +144,7 @@ func TestSend(t *testing.T) {
 	n.It("sends a message and waits for the ack", func() {
 		db := newDualBuffer()
 
-		s := NewSend(db, 0)
+		s := NewSend(db, NoWindow)
 
 		m := Log()
 		m.Add("hello", "world")
@@ -130,9 +163,11 @@ func TestSend(t *testing.T) {
 	})
 
 	n.It("only reads for acks when the available window slots is depleted", func() {
-		db := newDualBuffer()
+		send, recv := newPair()
+		defer send.Close()
+		defer recv.Close()
 
-		s := NewSend(db, 2)
+		s := NewSend(send, 3)
 
 		m := Log()
 		m.Add("hello", "world")
@@ -140,20 +175,26 @@ func TestSend(t *testing.T) {
 		err := s.Receive(m)
 		require.NoError(t, err)
 
+		assert.Equal(t, s.available, 2)
+
+		err = s.Receive(m)
+		require.NoError(t, err)
+
 		assert.Equal(t, s.available, 1)
 
-		err = s.Receive(m)
-		require.NoError(t, err)
-
-		assert.Equal(t, s.available, 0)
-
-		db.read.WriteString("kkk")
+		go func() {
+			time.Sleep(1)
+			recv.Write([]byte("kkk"))
+		}()
 
 		err = s.Receive(m)
 		require.NoError(t, err)
 
-		_, err = db.read.ReadByte()
-		assert.Equal(t, err, io.EOF)
+		assert.Equal(t, s.available, 3)
+	})
+
+	n.It("can calculate minimize windows to use", func() {
+		assert.Equal(t, 300, MinimumSendWindow(15*time.Millisecond, 1000))
 	})
 
 	n.Meow()
