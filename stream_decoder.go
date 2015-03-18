@@ -3,24 +3,20 @@ package cypress
 import "io"
 
 type StreamDecoder struct {
-	r   io.Reader
-	dec *Decoder
+	r    io.Reader
+	init bool
+	dec  *Decoder
 
 	Header *StreamHeader
 }
 
 func NewStreamDecoder(r io.Reader) (*StreamDecoder, error) {
-	sd := &StreamDecoder{r: r, dec: NewDecoder(r)}
-
-	err := sd.init()
-	if err != nil {
-		return nil, err
-	}
-
-	return sd, nil
+	return &StreamDecoder{r: r, dec: NewDecoder(r)}, nil
 }
 
-func (s *StreamDecoder) init() error {
+func (s *StreamDecoder) Probe() error {
+	s.init = true
+
 	probe := NewProbe(s.r)
 
 	err := probe.Probe()
@@ -36,6 +32,13 @@ func (s *StreamDecoder) init() error {
 }
 
 func (s *StreamDecoder) Generate() (*Message, error) {
+	if !s.init {
+		err := s.Probe()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return s.dec.Decode()
 }
 
