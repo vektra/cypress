@@ -41,3 +41,7 @@ func (r *Recv) Generate() (*Message, error) {
 
 	return m, nil
 }
+
+func (r *Recv) Close() error {
+	return nil
+}

@@ -19,6 +19,15 @@ type Parser interface {
 	Parse() error
 }
 
+type SendRequest interface {
+	Ack(*Message)
+	Nack(*Message)
+}
+
+type Sender interface {
+	Send(m *Message, req SendRequest) error
+}
+
 var ErrStopIteration = errors.New("stop iteration")
 
 type LogHandlerFunc func(*Message) error

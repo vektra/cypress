@@ -70,6 +70,10 @@ func newPair() (*os.File, *os.File) {
 func TestSend(t *testing.T) {
 	n := neko.Start(t)
 
+	var ack MockSendRequest
+
+	n.CheckMock(&ack.Mock)
+
 	n.It("sends a handshake header", func() {
 		db := newDualBuffer()
 
@@ -195,6 +199,100 @@ func TestSend(t *testing.T) {
 
 	n.It("can calculate minimize windows to use", func() {
 		assert.Equal(t, 300, MinimumSendWindow(15*time.Millisecond, 1000))
+	})
+
+	n.It("sends acks for messages that are received", func() {
+		db := newDualBuffer()
+
+		s := NewSend(db, NoWindow)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		db.read.WriteString("k")
+
+		ack.On("Ack", m).Return(nil)
+
+		err := s.Send(m, &ack)
+		require.NoError(t, err)
+
+		dec := NewDecoder(db.write)
+
+		m2, err := dec.Decode()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+	})
+
+	n.It("sends acks for proper messages", func() {
+		db := newDualBuffer()
+
+		s := NewSend(db, 0)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		m2 := Log()
+		m2.Add("message", "logs are fun")
+
+		ack.On("Ack", m).Return(nil)
+		ack.On("Nack", m2).Return(nil)
+
+		err := s.Send(m, &ack)
+		require.NoError(t, err)
+
+		err = s.Send(m2, &ack)
+		require.NoError(t, err)
+
+		db.read.WriteString("k")
+
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	n.It("sends nacks for messages inflight when an error is seen", func() {
+		send, recv := newPair()
+		defer send.Close()
+		defer recv.Close()
+
+		s := NewSend(send, 0)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		ack.On("Nack", m).Return(nil)
+
+		err := s.Send(m, &ack)
+		require.NoError(t, err)
+
+		err = recv.Close()
+		require.NoError(t, err)
+
+		// let backgroundAck routine detect the error
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	n.It("sends nacks for messages inflight when an error is seen on transmit", func() {
+		send, recv := newPair()
+		defer send.Close()
+		defer recv.Close()
+
+		s := NewSend(send, 0)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		ack.On("Nack", m).Return(nil)
+
+		err := recv.Close()
+		require.NoError(t, err)
+
+		time.Sleep(100 * time.Millisecond)
+
+		assert.Equal(t, s.closed, true)
+		s.closed = false
+
+		err = s.Send(m, &ack)
+		require.Equal(t, ErrClosed, err)
 	})
 
 	n.Meow()

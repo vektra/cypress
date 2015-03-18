@@ -1,6 +1,7 @@
 package cypress
 
 import (
+	"container/list"
 	"errors"
 	"io"
 	"sync"
@@ -12,8 +13,10 @@ type Send struct {
 	enc *StreamEncoder
 	buf []byte
 
+	closed    bool
 	window    int
 	available int32
+	reqs      *list.List
 
 	ackLock sync.Mutex
 	ackCond *sync.Cond
@@ -78,6 +81,7 @@ func NewSend(rw io.ReadWriter, window int) *Send {
 		buf:       make([]byte, window),
 		window:    window,
 		available: int32(window),
+		reqs:      list.New(),
 	}
 
 	s.ackCond = sync.NewCond(&s.ackLock)
@@ -97,10 +101,21 @@ func (s *Send) SendHandshake() error {
 }
 
 func (s *Send) transmit(m *Message) error {
-	return s.enc.Receive(m)
+	err := s.enc.Receive(m)
+	if err != nil {
+		s.sendNacks()
+		return ErrClosed
+	}
+
+	return nil
 }
 
 var ErrStreamUnsynced = errors.New("stream unsynced")
+
+type sendInFlight struct {
+	req SendRequest
+	m   *Message
+}
 
 func (s *Send) readAck() error {
 	n, err := s.rw.Read(s.buf)
@@ -112,6 +127,20 @@ func (s *Send) readAck() error {
 		if s.buf[0] != 'k' {
 			return ErrStreamUnsynced
 		}
+
+		f := s.reqs.Back()
+
+		if f == nil {
+			continue
+		}
+
+		if inf, ok := f.Value.(sendInFlight); ok {
+			if inf.req != nil {
+				inf.req.Ack(inf.m)
+			}
+		}
+
+		s.reqs.Remove(f)
 	}
 
 	s.ackLock.Lock()
@@ -122,33 +151,62 @@ func (s *Send) readAck() error {
 	return nil
 }
 
+func (s *Send) sendNacks() {
+	if s.closed {
+		return
+	}
+
+	for e := s.reqs.Front(); e != nil; e = e.Next() {
+		if inf, ok := e.Value.(sendInFlight); ok {
+			if inf.req != nil {
+				inf.req.Nack(inf.m)
+			}
+		}
+	}
+
+	s.closed = true
+}
+
 func (s *Send) backgroundAck() {
 	for {
 		err := s.readAck()
 		if err != nil {
-			if err == io.EOF {
-				return
-			}
+			s.ackLock.Lock()
+			defer s.ackLock.Unlock()
 
-			panic(err)
+			s.sendNacks()
+			return
 		}
 	}
 }
 
 func (s *Send) Receive(m *Message) error {
+	return s.Send(m, nil)
+}
+
+var ErrClosed = errors.New("send closed")
+
+func (s *Send) Send(m *Message, req SendRequest) error {
 	s.ackLock.Lock()
 	defer s.ackLock.Unlock()
+
+	if s.closed {
+		return ErrClosed
+	}
+
+	s.reqs.PushFront(sendInFlight{req, m})
+
+	s.available--
 
 	err := s.transmit(m)
 	if err != nil {
 		return err
 	}
 
-	s.available--
-
 	for s.available == 0 {
 		s.ackCond.Wait()
 	}
 
 	return nil
+
 }
