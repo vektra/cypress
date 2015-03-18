@@ -78,5 +78,30 @@ func TestRecv(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	n.It("does not ack messages if the header didn't indicate reliable", func() {
+		db := newDualBuffer()
+
+		s := NewStreamEncoder(db.Flip())
+
+		err := s.Init(NONE)
+		require.NoError(t, err)
+
+		r, err := NewRecv(db)
+		require.NoError(t, err)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		err = s.Receive(m)
+		require.NoError(t, err)
+
+		m2, err := r.Generate()
+		require.NoError(t, err)
+
+		assert.Equal(t, m, m2)
+
+		assert.Equal(t, 0, db.write.Len())
+	})
+
 	n.Meow()
 }

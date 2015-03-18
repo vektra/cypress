@@ -35,7 +35,9 @@ func (r *Recv) Generate() (*Message, error) {
 		return nil, err
 	}
 
-	r.sendAck()
+	if r.dec.Header.GetMode() == StreamHeader_RELIABLE {
+		r.sendAck()
+	}
 
 	return m, nil
 }

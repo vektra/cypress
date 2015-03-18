@@ -3,9 +3,9 @@ package cypress
 import "io"
 
 type Probe struct {
-	r   io.Reader
-	hdr StreamHeader
+	r io.Reader
 
+	Header *StreamHeader
 	Stream io.Reader
 }
 
@@ -13,6 +13,7 @@ func NewProbe(r io.Reader) *Probe {
 	return &Probe{
 		r:      r,
 		Stream: r,
+		Header: new(StreamHeader),
 	}
 }
 
@@ -33,11 +34,11 @@ func (p *Probe) Probe() error {
 		return nil
 	}
 
-	return p.hdr.UnmarshalFrom(p.r)
+	return p.Header.UnmarshalFrom(p.r)
 }
 
 func (p *Probe) Compression() StreamHeader_Compression {
-	return p.hdr.GetCompression()
+	return p.Header.GetCompression()
 }
 
 func (p *Probe) Reader() io.Reader {

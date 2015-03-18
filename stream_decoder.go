@@ -5,6 +5,8 @@ import "io"
 type StreamDecoder struct {
 	r   io.Reader
 	dec *Decoder
+
+	Header *StreamHeader
 }
 
 func NewStreamDecoder(r io.Reader) (*StreamDecoder, error) {
@@ -25,6 +27,8 @@ func (s *StreamDecoder) init() error {
 	if err != nil {
 		return err
 	}
+
+	s.Header = probe.Header
 
 	s.dec = NewDecoder(probe.Reader())
 
