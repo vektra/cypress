@@ -6,7 +6,6 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
 	"github.com/vektra/neko"
@@ -17,7 +16,7 @@ func TestPostgresql(t *testing.T) {
 	n := neko.Start(t)
 
 	var db MockDBInterface
-	var res ResultInterface
+	var res MockResultInterface
 
 	n.CheckMock(&db.Mock)
 
@@ -26,8 +25,8 @@ func TestPostgresql(t *testing.T) {
 		p.Init(&db)
 
 		db.On("Ping").Return(nil)
-		db.On("Exec", cEnableHstore, []interface{}(nil)).Return(res, nil)
-		db.On("Exec", cCreateTable, []interface{}(nil)).Return(res, nil)
+		db.On("Exec", cEnableHstore, []interface{}(nil)).Return(&res, nil)
+		db.On("Exec", cCreateTable, []interface{}(nil)).Return(&res, nil)
 
 		err := p.SetupDB()
 
@@ -46,7 +45,7 @@ func TestPostgresql(t *testing.T) {
 			msg.Type,
 			msg.SessionId,
 			msg.HstoreAttributes(),
-			msg.HstoreTags()}).Return(mock.Anything, nil)
+			msg.HstoreTags()}).Return(&res, nil)
 
 		err := p.Receive(msg)
 
