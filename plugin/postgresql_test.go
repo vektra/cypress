@@ -25,8 +25,8 @@ func TestPostgresql(t *testing.T) {
 		p.Init(&db)
 
 		db.On("Ping").Return(nil)
-		db.On("Exec", cCreateTable, []interface{}{}).Return(mock.Anything, nil)
-		db.On("Exec", cEnableHstore, []interface{}{}).Return(mock.Anything, nil)
+		db.On("Exec", cEnableHstore, []interface{}(nil)).Return(mock.Anything, nil)
+		db.On("Exec", cCreateTable, []interface{}(nil)).Return(mock.Anything, nil)
 
 		err := p.SetupDB()
 
