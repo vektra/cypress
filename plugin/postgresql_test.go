@@ -63,6 +63,10 @@ func TestPostgreSQLOnline(t *testing.T) {
 	if err != nil {
 		t.Skip()
 	}
+	err = db.Ping()
+	if err != nil {
+		t.Skip()
+	}
 
 	n.It("sets up a db", func() {
 		var p PostgreSQL
