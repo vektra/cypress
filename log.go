@@ -97,6 +97,76 @@ func strquote(in string) string {
 	return strings.Replace(in, `"`, `\"`, -1)
 }
 
+func (m *Message) HstoreTags() string {
+	var buf bytes.Buffer
+
+	m.HstoreTagsInto(&buf)
+
+	return buf.String()
+}
+
+func (m *Message) HstoreTagsInto(buf *bytes.Buffer) {
+	for i, tag := range m.Tags {
+		buf.WriteString(tag.Name)
+		buf.WriteString(" => ")
+
+		buf.WriteString("\"")
+		if tag.Value != nil {
+			buf.WriteString(strquote(*tag.Value))
+		}
+		buf.WriteString("\"")
+
+		if i < len(m.Tags)-1 {
+			buf.WriteString(", ")
+		}
+	}
+}
+
+func (m *Message) HstoreAttributes() string {
+	var buf bytes.Buffer
+
+	m.HstoreAttributesInto(&buf)
+
+	return buf.String()
+}
+
+func (m *Message) HstoreAttributesInto(buf *bytes.Buffer) {
+	for i, attr := range m.Attributes {
+		buf.WriteString(attr.StringKey(m))
+		buf.WriteString(" => ")
+
+		switch {
+		case attr.Ival != nil:
+			buf.WriteString(strconv.FormatInt(*attr.Ival, 10))
+		case attr.Fval != nil:
+			buf.WriteString(strconv.FormatFloat(*attr.Fval, 'g', -1, 64))
+		case attr.Boolval != nil:
+			if *attr.Boolval {
+				buf.WriteString("true")
+			} else {
+				buf.WriteString("false")
+			}
+		case attr.Sval != nil:
+			buf.WriteString("\"")
+			buf.WriteString(strquote(*attr.Sval))
+			buf.WriteString("\"")
+		case attr.Bval != nil:
+			buf.WriteString("\"")
+			buf.WriteString(strquote(string(attr.Bval)))
+			buf.WriteString("\"")
+		case attr.Tval != nil:
+			buf.WriteString(":")
+			buf.WriteString(strconv.FormatInt(int64(attr.Tval.GetSeconds()), 10))
+			buf.WriteString(".")
+			buf.WriteString(subsecond(attr.Tval.GetNanoseconds()))
+		}
+
+		if i < len(m.Attributes)-1 {
+			buf.WriteString(", ")
+		}
+	}
+}
+
 func (m *Message) KVPairs() string {
 	var buf bytes.Buffer
 
