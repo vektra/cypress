@@ -36,6 +36,11 @@ type DBInterface interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
+type ResultInterface interface {
+	LastInsertId() (int64, error)
+	RowsAffected() (int64, error)
+}
+
 type PostgreSQL struct {
 	DB DBInterface
 }

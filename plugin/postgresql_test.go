@@ -17,6 +17,7 @@ func TestPostgresql(t *testing.T) {
 	n := neko.Start(t)
 
 	var db MockDBInterface
+	var res ResultInterface
 
 	n.CheckMock(&db.Mock)
 
@@ -25,8 +26,8 @@ func TestPostgresql(t *testing.T) {
 		p.Init(&db)
 
 		db.On("Ping").Return(nil)
-		db.On("Exec", cEnableHstore, []interface{}(nil)).Return(mock.Anything, nil)
-		db.On("Exec", cCreateTable, []interface{}(nil)).Return(mock.Anything, nil)
+		db.On("Exec", cEnableHstore, []interface{}(nil)).Return(res, nil)
+		db.On("Exec", cCreateTable, []interface{}(nil)).Return(res, nil)
 
 		err := p.SetupDB()
 
