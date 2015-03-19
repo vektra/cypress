@@ -58,6 +58,7 @@ func TestPostgresql(t *testing.T) {
 func TestPostgreSQLOnline(t *testing.T) {
 	n := neko.Start(t)
 
+	// TODO: use ENV vars
 	db, err := sql.Open("postgres", "user=jlsuttles dbname=vektra_test sslmode=disable")
 	if err != nil {
 		t.Skip()

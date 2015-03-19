@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"bytes"
 	"database/sql"
 	"time"
 
@@ -38,26 +37,7 @@ type DBInterface interface {
 }
 
 type PostgreSQL struct {
-	Username string
-	Password string
-	Host     string
-	Port     string
-	DBName   string
-	DB       DBInterface
-}
-
-func (p *PostgreSQL) dataSourceName() string {
-	var buf bytes.Buffer
-	buf.WriteString(p.Username)
-	buf.WriteString(":")
-	buf.WriteString(p.Password)
-	buf.WriteString("@tcp(")
-	buf.WriteString(p.Host)
-	buf.WriteString(":")
-	buf.WriteString(p.Port)
-	buf.WriteString(")")
-	buf.WriteString(p.DBName)
-	return buf.String()
+	DB DBInterface
 }
 
 func (p *PostgreSQL) Init(db DBInterface) {
