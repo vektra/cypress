@@ -113,11 +113,11 @@ func (t *TCPSend) Receive(m *Message) error {
 func (t *TCPSend) drain() {
 	for {
 		select {
+		case <-t.closed:
+			t.reconnect()
 		case m := <-t.newMessages:
 			t.outstanding++
 			t.s.Send(m, t)
-		case <-t.closed:
-			t.reconnect()
 		}
 	}
 }
