@@ -107,8 +107,10 @@ func (m *Message) HstoreTags() string {
 
 func (m *Message) HstoreTagsInto(buf *bytes.Buffer) {
 	for i, tag := range m.Tags {
+		buf.WriteString("\"")
 		buf.WriteString(tag.Name)
-		buf.WriteString(" => ")
+		buf.WriteString("\"")
+		buf.WriteString("=>")
 
 		buf.WriteString("\"")
 		if tag.Value != nil {
@@ -132,8 +134,10 @@ func (m *Message) HstoreAttributes() string {
 
 func (m *Message) HstoreAttributesInto(buf *bytes.Buffer) {
 	for i, attr := range m.Attributes {
+		buf.WriteString("\"")
 		buf.WriteString(attr.StringKey(m))
-		buf.WriteString(" => ")
+		buf.WriteString("\"")
+		buf.WriteString("=>")
 
 		switch {
 		case attr.Ival != nil:

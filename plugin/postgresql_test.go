@@ -32,6 +32,13 @@ SELECT extname
 FROM pg_extension
 WHERE extname = 'hstore'`
 
+const cCheckLatestMessage = `
+SELECT timestamp, version, type, session_id, attributes, tags
+FROM cypress_messages
+ORDER BY timestamp
+DESC
+LIMIT 1`
+
 func TestPostgresql(t *testing.T) {
 
 	n := neko.Start(t)
@@ -104,8 +111,8 @@ func TestPostgreSQLOnline(t *testing.T) {
 		var p PostgreSQL
 		p.Init(db)
 
-		var err error
 		var hstore string
+		var err error
 
 		db.Exec(cDropHstore)
 		row := db.QueryRow(cCheckHstoreExists)
@@ -131,22 +138,39 @@ func TestPostgreSQLOnline(t *testing.T) {
 		var p PostgreSQL
 		p.Init(db)
 
-		err := p.SetupDB()
+		var err error
+
+		var (
+			timestamp  time.Time
+			version    int32
+			msgType    uint32
+			sessionId  string
+			attributes string
+			tags       string
+		)
+
+		err = p.SetupDB()
 		require.NoError(t, err)
 
 		msg := cypress.Log()
-		msg.Add("message", "Hiiiii")
+		msg.Add("message", "hiiiii")
 		msg.AddTag("key", "value")
-		msg.AddTag("key2", "")
+		sessionId = "123456"
+		msg.SessionId = &sessionId
 
 		err = p.Receive(msg)
-
-		if err != nil {
-			panic(err)
-		}
-
 		require.NoError(t, err)
-		// TODO: write sql stmt to check
+
+		row := db.QueryRow(cCheckLatestMessage)
+		err = row.Scan(&timestamp, &version, &msgType, &sessionId, &attributes, &tags)
+		require.NoError(t, err)
+
+		require.Equal(t, msg.GetTimestamp().Time().Format(time.RFC3339), timestamp.Format(time.RFC3339))
+		require.Equal(t, msg.Version, version)
+		require.Equal(t, *msg.Type, msgType)
+		require.Equal(t, *msg.SessionId, sessionId)
+		require.Equal(t, msg.HstoreAttributes(), attributes)
+		require.Equal(t, msg.HstoreTags(), tags)
 	})
 
 	n.Meow()
