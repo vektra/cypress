@@ -171,6 +171,8 @@ func (s *Send) sendNacks() {
 	if s.OnClosed != nil {
 		s.OnClosed()
 	}
+
+	s.ackCond.Signal()
 }
 
 func (s *Send) backgroundAck() {
@@ -214,6 +216,10 @@ func (s *Send) Send(m *Message, req SendRequest) error {
 	}
 
 	for s.available == 0 {
+		if s.closed {
+			return ErrClosed
+		}
+
 		s.ackCond.Wait()
 	}
 
