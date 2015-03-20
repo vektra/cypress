@@ -9,6 +9,7 @@ import (
 type Send struct {
 	Addr   string `short:"a" long:"addr" description:"Who to send the stream to"`
 	Window int    `short:"w" long:"window" description:"Window size to use when transmitting"`
+	Buffer int    `short:"b" long:"buffer" description:"How big of an internal buffer to use"`
 }
 
 func (s *Send) Execute(args []string) error {
@@ -17,7 +18,12 @@ func (s *Send) Execute(args []string) error {
 		window = cypress.MinimumWindow
 	}
 
-	tcp, err := cypress.NewTCPSend(s.Addr)
+	buffer := s.Buffer
+	if buffer == 0 {
+		buffer = cypress.DefaultTCPBuffer
+	}
+
+	tcp, err := cypress.NewTCPSend(s.Addr, window, buffer)
 	if err != nil {
 		return err
 	}

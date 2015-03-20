@@ -20,13 +20,15 @@ type TCPSend struct {
 	nacked []*Message
 }
 
-func NewTCPSend(host string) (*TCPSend, error) {
+const DefaultTCPBuffer = 128
+
+func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 	c, err := net.Dial("tcp", host)
 	if err != nil {
 		return nil, err
 	}
 
-	s := NewSend(c, 0)
+	s := NewSend(c, window)
 	err = s.SendHandshake()
 	if err != nil {
 		return nil, err
@@ -36,7 +38,7 @@ func NewTCPSend(host string) (*TCPSend, error) {
 		host:        host,
 		c:           c,
 		s:           s,
-		newMessages: make(chan *Message, 10),
+		newMessages: make(chan *Message, buffer),
 		closed:      make(chan bool),
 	}
 

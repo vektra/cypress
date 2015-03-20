@@ -40,7 +40,7 @@ func TestTCPSend(t *testing.T) {
 		m := Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String())
+		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -89,7 +89,7 @@ func TestTCPSend(t *testing.T) {
 		m := Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String())
+		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -168,7 +168,7 @@ func TestTCPSend(t *testing.T) {
 		m := Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String())
+		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
