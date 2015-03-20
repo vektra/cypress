@@ -1,8 +1,6 @@
 package cypress
 
-import (
-	"io"
-)
+import "io"
 
 type Recv struct {
 	rw  io.ReadWriter

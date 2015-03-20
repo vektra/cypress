@@ -9,6 +9,8 @@ import (
 )
 
 type Send struct {
+	OnClosed func()
+
 	rw  io.ReadWriter
 	enc *StreamEncoder
 	buf []byte
@@ -165,6 +167,10 @@ func (s *Send) sendNacks() {
 	}
 
 	s.closed = true
+
+	if s.OnClosed != nil {
+		s.OnClosed()
+	}
 }
 
 func (s *Send) backgroundAck() {
@@ -191,6 +197,10 @@ func (s *Send) Send(m *Message, req SendRequest) error {
 	defer s.ackLock.Unlock()
 
 	if s.closed {
+		if req != nil {
+			req.Nack(m)
+		}
+
 		return ErrClosed
 	}
 

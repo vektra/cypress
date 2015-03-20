@@ -295,5 +295,23 @@ func TestSend(t *testing.T) {
 		require.Equal(t, ErrClosed, err)
 	})
 
+	n.It("sends nacks for messages sent when already closed", func() {
+		send, recv := newPair()
+		defer send.Close()
+		defer recv.Close()
+
+		s := NewSend(send, 0)
+
+		m := Log()
+		m.Add("hello", "world")
+
+		ack.On("Nack", m).Return(nil)
+
+		s.closed = true
+
+		err := s.Send(m, &ack)
+		require.Equal(t, ErrClosed, err)
+	})
+
 	n.Meow()
 }

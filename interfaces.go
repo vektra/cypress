@@ -28,6 +28,10 @@ type Sender interface {
 	Send(m *Message, req SendRequest) error
 }
 
+type SendMaker interface {
+	NewSender(window int) (Sender, error)
+}
+
 var ErrStopIteration = errors.New("stop iteration")
 
 type LogHandlerFunc func(*Message) error
