@@ -17,6 +17,8 @@ type TCPSend struct {
 	newMessages chan *Message
 	closed      chan bool
 
+	shutdown bool
+
 	nacked []*Message
 }
 
@@ -50,6 +52,7 @@ func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 }
 
 func (t *TCPSend) Close() error {
+	t.shutdown = true
 	return t.c.Close()
 }
 
@@ -74,11 +77,16 @@ func (t *TCPSend) onClosed() {
 
 func (t *TCPSend) reconnect() {
 	t.lock.Lock()
-	defer t.lock.Unlock()
 
 tryagain:
+
 	c, err := net.Dial("tcp", t.host)
 	if err != nil {
+		if t.shutdown {
+			t.lock.Unlock()
+			return
+		}
+
 		time.Sleep(1 * time.Second)
 		goto tryagain
 	}
