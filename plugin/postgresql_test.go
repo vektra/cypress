@@ -16,6 +16,22 @@ import (
 const cUser = "TEST_POSTGRESQL_USER"
 const cDBName = "TEST_POSTGRESQL_DB_NAME"
 
+const cDropTable = `
+DROP TABLE IF EXISTS cypress_messages
+`
+
+const cDropHstore = `
+DROP EXTENSION IF EXISTS hstore CASCADE
+`
+
+const cCheckTableExists = `
+SELECT 'public.cypress_messages'::regclass`
+
+const cCheckHstoreExists = `
+SELECT extname
+FROM pg_extension
+WHERE extname = 'hstore'`
+
 func TestPostgresql(t *testing.T) {
 
 	n := neko.Start(t)
@@ -88,13 +104,27 @@ func TestPostgreSQLOnline(t *testing.T) {
 		var p PostgreSQL
 		p.Init(db)
 
-		err := p.SetupDB()
-		if err != nil {
-			require.NoError(t, err)
-		}
+		var err error
+		var hstore string
 
+		db.Exec(cDropHstore)
+		row := db.QueryRow(cCheckHstoreExists)
+		row.Scan(&hstore)
+		require.Equal(t, "", hstore)
+
+		db.Exec(cDropTable)
+		_, err = db.Exec(cCheckTableExists)
+		require.Error(t, err)
+
+		err = p.SetupDB()
 		require.NoError(t, err)
-		// TODO: write sql stmt to check
+
+		_, err = db.Exec(cCheckTableExists)
+		require.NoError(t, err)
+
+		row = db.QueryRow(cCheckHstoreExists)
+		row.Scan(&hstore)
+		require.Equal(t, "hstore", hstore)
 	})
 
 	n.It("receives a message", func() {
