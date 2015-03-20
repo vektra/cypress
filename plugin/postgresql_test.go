@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"database/sql"
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -10,6 +12,9 @@ import (
 	"github.com/vektra/cypress"
 	"github.com/vektra/neko"
 )
+
+const cUser = "TEST_POSTGRESQL_USER"
+const cDBName = "TEST_POSTGRESQL_DB_NAME"
 
 func TestPostgresql(t *testing.T) {
 
@@ -58,14 +63,25 @@ func TestPostgresql(t *testing.T) {
 func TestPostgreSQLOnline(t *testing.T) {
 	n := neko.Start(t)
 
-	// TODO: use ENV vars
-	db, err := sql.Open("postgres", "user=jlsuttles dbname=vektra_test sslmode=disable")
-	if err != nil {
-		t.Skip()
+	user := os.Getenv(cUser)
+	if user == "" {
+		t.Skipf("%s is not set.", cUser)
 	}
+
+	dbName := os.Getenv(cDBName)
+	if dbName == "" {
+		t.Skipf("%s is not set.", cDBName)
+	}
+
+	db, err := sql.Open("postgres",
+		fmt.Sprintf("user=%s dbname=%s sslmode=disable", user, dbName))
+	if err != nil {
+		t.Skip(err)
+	}
+
 	err = db.Ping()
 	if err != nil {
-		t.Skip()
+		t.Skipf("Could not connect to database: %s", err)
 	}
 
 	n.It("sets up a db", func() {
