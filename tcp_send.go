@@ -101,16 +101,20 @@ tryagain:
 	t.c = c
 	t.s = s
 
-	for idx, msg := range t.nacked {
+	nacked := t.nacked
+	t.nacked = nil
+
+	t.lock.Unlock()
+
+	for idx, msg := range nacked {
 		t.outstanding++
 		err = t.s.Send(msg, t)
 		if err != nil {
-			t.nacked = t.nacked[idx:]
+			t.lock.Lock()
+			t.nacked = append(nacked[idx:], t.nacked...)
 			goto tryagain
 		}
 	}
-
-	t.nacked = nil
 }
 
 func (t *TCPSend) Receive(m *Message) error {
