@@ -41,7 +41,7 @@ func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 		c:           c,
 		s:           s,
 		newMessages: make(chan *Message, buffer),
-		closed:      make(chan bool),
+		closed:      make(chan bool, 1),
 	}
 
 	s.OnClosed = tcp.onClosed
