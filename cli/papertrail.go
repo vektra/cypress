@@ -9,13 +9,13 @@ import (
 )
 
 type PapertrailCommand struct {
-	Host string `short:"H" long:"host" description:"Papertrail host <host>.papertrailapp.com:<port>"`
-	Port string `short:"P" long:"port" description:"Papertrail port <host>.papertrailapp.com:<port>"`
+	Host string `short:"H" long:"host" description:"Papertrail host <host>:<port>"`
+	Port string `short:"P" long:"port" description:"Papertrail port <host>:<port>"`
 	Ssl  bool   `short:"S" long:"tls" default:"true" description:"Use TLS"`
 }
 
 func (p *PapertrailCommand) Execute(args []string) error {
-	address := fmt.Sprintf("%s.papertrailapp.com:%s", p.Host, p.Port)
+	address := fmt.Sprintf("%s:%s", p.Host, p.Port)
 
 	papertrail := papertrail.NewLogger(address, p.Ssl)
 
