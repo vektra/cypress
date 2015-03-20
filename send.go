@@ -158,7 +158,7 @@ func (s *Send) sendNacks() {
 		return
 	}
 
-	for e := s.reqs.Front(); e != nil; e = e.Next() {
+	for e := s.reqs.Back(); e != nil; e = e.Prev() {
 		if inf, ok := e.Value.(sendInFlight); ok {
 			if inf.req != nil {
 				inf.req.Nack(inf.m)
