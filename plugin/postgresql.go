@@ -8,11 +8,11 @@ import (
 )
 
 const cEnableHstore = `
-CREATE EXTENSION hstore
+CREATE EXTENSION IF NOT EXISTS hstore
 `
 
 const cCreateTable = `
-CREATE TABLE cypress_messages (
+CREATE TABLE IF NOT EXISTS cypress_messages (
 	timestamp TIMESTAMP,
 	version INTEGER,
 	type INTEGER,
@@ -55,19 +55,17 @@ func (p *PostgreSQL) SetupDB() error {
 		return err
 	}
 
-	// TODO: first check if already enabled
 	_, err = p.DB.Exec(cEnableHstore)
 	if err != nil {
-		// return err
+		return err
 	}
 
-	// TODO: first check if already created
 	_, err = p.DB.Exec(cCreateTable)
 	if err != nil {
-		// return err
+		return err
 	}
 
-	// TODO: alter table if schema doesnt match
+	// TODO: alter table if schema doesnt match ?
 
 	return nil
 }
