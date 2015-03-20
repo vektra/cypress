@@ -114,7 +114,7 @@ func TestTCPSend(t *testing.T) {
 		latch <- true
 		wg.Wait()
 
-		runtime.Gosched()
+		time.Sleep(100 * time.Millisecond)
 
 		assert.Equal(t, 1, tcp.outstanding)
 	})
