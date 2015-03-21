@@ -2,14 +2,16 @@ package cypress
 
 import (
 	"net"
+	"sort"
 	"sync"
 	"time"
 )
 
 type TCPSend struct {
-	host string
-	c    net.Conn
-	s    *Send
+	host   string
+	window int
+	c      net.Conn
+	s      *Send
 
 	lock        sync.Mutex
 	outstanding int
@@ -19,7 +21,7 @@ type TCPSend struct {
 
 	shutdown bool
 
-	nacked []*Message
+	nacked Messages
 }
 
 const DefaultTCPBuffer = 128
@@ -38,6 +40,7 @@ func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 
 	tcp := &TCPSend{
 		host:        host,
+		window:      window,
 		c:           c,
 		s:           s,
 		newMessages: make(chan *Message, buffer),
@@ -78,24 +81,35 @@ func (t *TCPSend) onClosed() {
 func (t *TCPSend) reconnect() {
 	t.lock.Lock()
 
-tryagain:
+	var (
+		c   net.Conn
+		s   *Send
+		err error
+	)
 
-	c, err := net.Dial("tcp", t.host)
-	if err != nil {
-		if t.shutdown {
-			t.lock.Unlock()
-			return
+	t.c.Close()
+
+	for {
+		c, err = net.Dial("tcp", t.host)
+		if err != nil {
+			if t.shutdown {
+				t.lock.Unlock()
+				return
+			}
+
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
-		time.Sleep(1 * time.Second)
-		goto tryagain
-	}
+		s = NewSend(c, t.window)
+		s.OnClosed = t.onClosed
+		err = s.SendHandshake()
+		if err != nil {
+			c.Close()
+			continue
+		}
 
-	s := NewSend(c, 0)
-	err = s.SendHandshake()
-	if err != nil {
-		c.Close()
-		goto tryagain
+		break
 	}
 
 	t.c = c
@@ -111,8 +125,14 @@ tryagain:
 		err = t.s.Send(msg, t)
 		if err != nil {
 			t.lock.Lock()
-			t.nacked = append(nacked[idx:], t.nacked...)
-			goto tryagain
+			t.nacked = append(nacked[idx+1:], t.nacked...)
+			sort.Sort(t.nacked)
+
+			// don't retry here because the OnClose handler will
+			// prime the closed channel, so we return from here, pick
+			// up the value from the channel, then this is called again.
+			t.lock.Unlock()
+			return
 		}
 	}
 }
@@ -128,7 +148,9 @@ func (t *TCPSend) drain() {
 		case <-t.closed:
 			t.reconnect()
 		case m := <-t.newMessages:
+			t.lock.Lock()
 			t.outstanding++
+			t.lock.Unlock()
 			t.s.Send(m, t)
 		}
 	}

@@ -270,7 +270,100 @@ func TestTCPSend(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			assert.NoError(t, sent[i].VerboseEqual(remote[i]))
 		}
+		for i := 0; i < 100; i++ {
+			assert.NoError(t, sent[i].VerboseEqual(remote[i]))
+		}
 	})
 
+	n.It("doesn't lose messages when seeing an error resending nack'd messages", func() {
+		time.Sleep(1 * time.Second)
+
+		l, err := net.Listen("tcp", ":0")
+		require.NoError(t, err)
+
+		addr := l.Addr().String()
+
+		defer l.Close()
+
+		var remote []*Message
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func(l net.Listener) {
+			defer wg.Done()
+
+			c, err := l.Accept()
+			require.NoError(t, err)
+
+			recv, err := NewRecv(c)
+			require.NoError(t, err)
+
+			for i := 0; i < 50; i++ {
+				m, err := recv.Generate()
+				require.NoError(t, err)
+
+				remote = append(remote, m)
+			}
+
+			time.Sleep(1 * time.Second)
+
+			c.Close()
+
+			c, err = l.Accept()
+			require.NoError(t, err)
+
+			recv, err = NewRecv(c)
+			require.NoError(t, err)
+
+			for i := 0; i < 10; i++ {
+				m, err := recv.Generate()
+				require.NoError(t, err)
+
+				remote = append(remote, m)
+			}
+
+			c.Close()
+
+			c, err = l.Accept()
+			require.NoError(t, err)
+
+			defer c.Close()
+
+			recv, err = NewRecv(c)
+			require.NoError(t, err)
+
+			for i := 0; i < 40; i++ {
+				m, err := recv.Generate()
+				require.NoError(t, err)
+
+				remote = append(remote, m)
+			}
+		}(l)
+
+		tcp, err := NewTCPSend(addr, 0, 0)
+		require.NoError(t, err)
+
+		defer tcp.Close()
+
+		var sent []*Message
+
+		for i := 0; i < 100; i++ {
+			time.Sleep(1 * time.Millisecond)
+
+			m := Log()
+			m.Add("iter", i)
+
+			sent = append(sent, m)
+
+			err = tcp.Receive(m)
+			require.NoError(t, err)
+		}
+
+		wg.Wait()
+
+		for i := 0; i < 100; i++ {
+			assert.NoError(t, sent[i].VerboseEqual(remote[i]))
+		}
+	})
 	n.Meow()
 }
