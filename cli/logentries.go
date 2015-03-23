@@ -12,7 +12,7 @@ type LogentriesCommand struct {
 	Host  string `short:"H" long:"host" default:"data.logentries.com" description:"Logentries host <host>:<port>"`
 	Port  string `short:"P" long:"port" default:"2000" description:"Logentries port <host>:<port>"`
 	Ssl   bool   `short:"S" long:"tls" default:"true" description:"Use TLS"`
-	Token string `short:"T" long: "token" description:"Logentries token that uniquely identifies the destination log"`
+	Token string `short:"T" long:"token" description:"Logentries token that uniquely identifies the destination log"`
 }
 
 func (p *LogentriesCommand) Execute(args []string) error {
