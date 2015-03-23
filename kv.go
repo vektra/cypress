@@ -6,7 +6,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"text/scanner"
+
+	"github.com/vektra/cypress/scanner"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/vektra/tai64n"
@@ -86,8 +87,10 @@ func (kv *KVParser) skipToStart() rune {
 		case '\n':
 			tok = kv.scan.Peek()
 
-			if tok == '>' || tok == scanner.EOF {
-				kv.scan.Next() // consume the >
+			switch tok {
+			case '>':
+				return kv.scan.Next()
+			case scanner.EOF:
 				return tok
 			}
 
@@ -123,26 +126,32 @@ func (s *KVParser) Generate() (*Message, error) {
 restart:
 	tok := scan.Peek()
 
+	if tok == scanner.EOF {
+		return nil, io.EOF
+	}
+
 	if tok != '>' {
 		if s.Bare {
 			return s.readBare()
 		}
 
 		tok = s.skipToStart()
+
+		if tok == scanner.EOF {
+			return nil, io.EOF
+		}
 	} else {
 		scan.Next() // consume the >
-	}
-
-	if tok == scanner.EOF {
-		return nil, io.EOF
 	}
 
 	// We're at the start of a message now
 
 	m := Log()
 
+	tok = scan.Peek()
+
 	// Detect a type flag
-	switch scan.Peek() {
+	switch tok {
 	case '!':
 		scan.Next()
 		m.Type = proto.Uint32(METRIC)
@@ -155,6 +164,8 @@ restart:
 	case '?':
 		scan.Next()
 		m.Type = proto.Uint32(HEARTBEAT)
+	case scanner.EOF:
+		return nil, io.EOF
 	}
 
 	if scan.Next() != ' ' {
