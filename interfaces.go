@@ -15,6 +15,10 @@ type Generator interface {
 	Close() error
 }
 
+type GeneratorHandler interface {
+	HandleGenerator(g Generator)
+}
+
 type Parser interface {
 	Parse() error
 }

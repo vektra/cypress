@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"net"
 	"os"
 	"sync"
 
@@ -13,43 +12,22 @@ type Recv struct {
 
 	lock sync.Mutex
 
-	enc *cypress.StreamEncoder
+	out cypress.Receiver
 }
 
 func (r *Recv) Execute(args []string) error {
-	l, err := net.Listen("tcp", r.Listen)
+	tcp, err := cypress.NewTCPRecv(r.Listen, r)
 	if err != nil {
 		return err
 	}
 
-	r.enc = cypress.NewStreamEncoder(os.Stdout)
+	r.out = cypress.NewSerialReceiver(cypress.NewStreamEncoder(os.Stdout))
 
-	for {
-		c, err := l.Accept()
-		if err != nil {
-			return err
-		}
-
-		go r.handle(c)
-	}
-
-	return nil
+	return tcp.ListenAndAccept()
 }
 
-func (r *Recv) handle(c net.Conn) error {
-	recv, err := cypress.NewRecv(c)
-	if err != nil {
-		return err
-	}
-
-	return cypress.Glue(recv, r)
-}
-
-func (r *Recv) Receive(m *cypress.Message) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	return r.enc.Receive(m)
+func (r *Recv) HandleGenerator(gen cypress.Generator) {
+	cypress.Glue(gen, r.out)
 }
 
 func init() {
