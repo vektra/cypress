@@ -15,7 +15,7 @@ var (
 
 func parser() *flags.Parser {
 	globalParserSetup.Do(func() {
-		globalParser = flags.NewNamedParser("cypress", flags.Default)
+		globalParser = flags.NewNamedParser("cypress", flags.Default|flags.PassAfterNonOption)
 	})
 
 	return globalParser
