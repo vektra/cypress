@@ -64,6 +64,37 @@ output = ["main"]
 		assert.Equal(t, []string{"main"}, r1.Output)
 	})
 
+	noRouteToml := `
+[in.TCP]
+address = ":8213"
+
+[out.S3]
+dir = "tmp/s3"
+acl = "public"
+region = "us-west-1"
+access_key = "blah"
+`
+
+	n.It("creates a default route if none are given", func() {
+		r := NewRouter()
+		err := r.LoadConfig(strings.NewReader(noRouteToml))
+		require.NoError(t, err)
+
+		err = r.Open()
+		require.NoError(t, err)
+
+		defer r.Close()
+
+		r1, ok := r.routes["Default"]
+		require.True(t, ok)
+
+		assert.Equal(t, true, r1.Enabled)
+		assert.Equal(t, "Default", r1.Name)
+
+		assert.Equal(t, []string{"in"}, r1.Generate)
+		assert.Equal(t, []string{"out"}, r1.Output)
+	})
+
 	n.It("creates instances of the requested plugins", func() {
 		r := NewRouter()
 		err := r.LoadConfig(strings.NewReader(basicToml))

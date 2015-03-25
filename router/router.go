@@ -131,6 +131,31 @@ func (r *Router) Open() error {
 		}
 	}
 
+	var err error
+
+	if len(r.routes) == 0 {
+		r.routes["Default"] = &Route{
+			Name:     "Default",
+			Enabled:  true,
+			Generate: []string{"in"},
+			Output:   []string{"out"},
+		}
+	}
+
+	err = r.wireRoutes()
+
+	if err != nil {
+		return err
+	}
+
+	for _, route := range r.routes {
+		go route.Flow()
+	}
+
+	return nil
+}
+
+func (r *Router) wireRoutes() error {
 	for _, route := range r.routes {
 		for _, name := range route.Generate {
 			def, ok := r.plugins[name]
@@ -167,8 +192,6 @@ func (r *Router) Open() error {
 
 			route.receivers = append(route.receivers, recv)
 		}
-
-		go route.Flow()
 	}
 
 	return nil
@@ -196,5 +219,11 @@ func (r *Route) Flow() {
 }
 
 func (r *Router) Close() error {
+	for _, route := range r.routes {
+		for _, g := range route.generators {
+			g.Close()
+		}
+	}
+
 	return nil
 }
