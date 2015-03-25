@@ -1,4 +1,4 @@
-package plugin
+package s3
 
 import (
 	"crypto/ecdsa"
@@ -17,6 +17,7 @@ import (
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/httputil"
 	"github.com/vektra/cypress/keystore"
+	"github.com/vektra/cypress/plugins/spool"
 	"github.com/vektra/errors"
 	"github.com/vektra/tai64n"
 )
@@ -108,7 +109,7 @@ type S3 struct {
 
 	client   *s3.S3
 	bucket   *s3.Bucket
-	spool    *Spool
+	spool    *spool.Spool
 	enc      *cypress.StreamEncoder
 	lastFile string
 
@@ -116,7 +117,7 @@ type S3 struct {
 }
 
 func NewS3(dir, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S3, error) {
-	spool, err := NewSpool(dir)
+	spool, err := spool.NewSpool(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func NewS3(dir, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S
 	return s3, nil
 }
 
-func NewS3WithSpool(spool *Spool, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S3, error) {
+func NewS3WithSpool(spool *spool.Spool, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S3, error) {
 	client := s3.New(auth, region)
 
 	s3 := &S3{

@@ -7,12 +7,12 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/metrics"
 )
 
 type MetricsConfig struct {
 	HTTP   string
-	Influx *plugin.InfluxConfig
+	Influx *metrics.InfluxConfig
 }
 
 type Metrics struct {
@@ -23,7 +23,7 @@ type Metrics struct {
 func (m *Metrics) Execute(args []string) error {
 	var mc MetricsConfig
 
-	mc.Influx = plugin.DefaultInfluxConfig()
+	mc.Influx = metrics.DefaultInfluxConfig()
 
 	mc.HTTP = m.HTTP
 
@@ -39,7 +39,7 @@ func (m *Metrics) Execute(args []string) error {
 		}
 	}
 
-	metrics := plugin.NewMetricSink()
+	metrics := metrics.NewMetricSink()
 
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {

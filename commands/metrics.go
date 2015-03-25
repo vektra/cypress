@@ -1,17 +1,20 @@
 package commands
 
-import "github.com/vektra/cypress/plugin"
+import (
+	"github.com/vektra/cypress/plugins/metrics"
+	"github.com/vektra/cypress/plugins/statsd"
+)
 
 type Metrics struct {
 	httpAddr string
-	statsd   *plugin.Statsd
-	sink     *plugin.MetricSink
+	statsd   *statsd.Statsd
+	sink     *metrics.MetricSink
 }
 
-func NewMetrics(statsd, http string) (*Metrics, error) {
-	ms := plugin.NewMetricSink()
+func NewMetrics(addr, http string) (*Metrics, error) {
+	ms := metrics.NewMetricSink()
 
-	se, err := plugin.NewStatsdEndpoint(ms, statsd)
+	se, err := statsd.NewStatsdEndpoint(ms, addr)
 	if err != nil {
 		return nil, err
 	}

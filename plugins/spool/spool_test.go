@@ -1,4 +1,4 @@
-package plugin
+package spool
 
 import (
 	"io/ioutil"

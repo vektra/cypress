@@ -1,4 +1,4 @@
-package plugin
+package postgresql
 
 import "github.com/stretchr/testify/mock"
 

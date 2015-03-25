@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/vektra/cypress/commands"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/spool"
 )
 
 type InjectCommand struct {
@@ -24,7 +24,7 @@ func (i *InjectCommand) Execute(args []string) error {
 		os.MkdirAll(dir, 0755)
 	}
 
-	spool, err := plugin.NewSpool(dir)
+	spool, err := spool.NewSpool(dir)
 	if err != nil {
 		return err
 	}

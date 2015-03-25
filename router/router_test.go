@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/s3"
 	"github.com/vektra/neko"
 )
 
@@ -110,7 +110,7 @@ access_key = "blah"
 
 		assert.Equal(t, ":8213", tcp.Address)
 
-		s3, ok := r.plugins["main"].Plugin.(*plugin.S3Plugin)
+		s3, ok := r.plugins["main"].Plugin.(*s3.S3Plugin)
 		require.True(t, ok)
 
 		assert.Equal(t, "blah", s3.AccessKey)

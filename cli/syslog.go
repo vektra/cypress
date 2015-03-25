@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/syslog"
 )
 
 type Syslog struct {
@@ -36,7 +36,7 @@ func (s *Syslog) Execute(args []string) error {
 		return err
 	}
 
-	var syslog *plugin.Syslog
+	var conn *syslog.Syslog
 
 	switch {
 	case cnt == 0:
@@ -44,14 +44,14 @@ func (s *Syslog) Execute(args []string) error {
 	case cnt > 1:
 		return fmt.Errorf("specify only one method")
 	case s.Dgram != "":
-		syslog, err = plugin.NewSyslogDgram(s.Dgram, r)
+		conn, err = syslog.NewSyslogDgram(s.Dgram, r)
 	case s.TCP != "":
 		l, err := net.Listen("tcp", s.TCP)
 		if err != nil {
 			return err
 		}
 
-		syslog, err = plugin.NewSyslogFromListener(l, r)
+		conn, err = syslog.NewSyslogFromListener(l, r)
 	case s.UDP != "":
 		addr, err := net.ResolveUDPAddr("udp", s.UDP)
 		if err != nil {
@@ -63,10 +63,10 @@ func (s *Syslog) Execute(args []string) error {
 			return err
 		}
 
-		syslog, err = plugin.NewSyslogFromConn(c, r)
+		conn, err = syslog.NewSyslogFromConn(c, r)
 	}
 
-	return syslog.Run()
+	return conn.Run()
 }
 
 func init() {

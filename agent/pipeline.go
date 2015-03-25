@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/spool"
 )
 
 func ParseSource(s string, r cypress.Receiver) Source {
@@ -34,10 +34,10 @@ func ParseSource(s string, r cypress.Receiver) Source {
 func ParseSink(s string) (cypress.Receiver, error) {
 	switch s {
 	case "spool":
-		return plugin.NewSpool(plugin.DefaultSpoolDir)
+		return spool.NewSpool(spool.DefaultSpoolDir)
 	default:
 		if s[0:6] == "spool:" {
-			return plugin.NewSpool(s[7:])
+			return spool.NewSpool(s[7:])
 		} else {
 			uri, err := url.Parse(s)
 

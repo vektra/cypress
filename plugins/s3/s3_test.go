@@ -1,4 +1,4 @@
-package plugin
+package s3
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/keystore"
+	"github.com/vektra/cypress/plugins/spool"
 	"github.com/vektra/neko"
 )
 
@@ -97,7 +98,7 @@ func TestS3(t *testing.T) {
 		spooldir2 := filepath.Join(tmpdir, "spool2")
 		defer os.RemoveAll(spooldir2)
 
-		spool, err := NewSpool(spooldir2)
+		spool, err := spool.NewSpool(spooldir2)
 		require.NoError(t, err)
 
 		m := cypress.Log()

@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugin"
+	"github.com/vektra/cypress/plugins/statsd"
 )
 
 type Statsd struct {
@@ -19,7 +19,7 @@ func (s *Statsd) Execute(args []string) error {
 		return err
 	}
 
-	ep, err := plugin.NewStatsdEndpoint(enc, s.Listen)
+	ep, err := statsd.NewStatsdEndpoint(enc, s.Listen)
 	if err != nil {
 		return err
 	}

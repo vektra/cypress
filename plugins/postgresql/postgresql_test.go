@@ -1,4 +1,4 @@
-package plugin
+package postgresql
 
 import (
 	"database/sql"
