@@ -1,6 +1,9 @@
 package cypress
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type Plugin interface {
 	Receiver() (Receiver, error)
@@ -10,11 +13,11 @@ type Plugin interface {
 var plugins = map[string]func() Plugin{}
 
 func AddPlugin(name string, creator func() Plugin) {
-	plugins[name] = creator
+	plugins[strings.ToLower(name)] = creator
 }
 
 func FindPlugin(name string) (Plugin, bool) {
-	t, ok := plugins[name]
+	t, ok := plugins[strings.ToLower(name)]
 	if !ok {
 		return nil, false
 	}
