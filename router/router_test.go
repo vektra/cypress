@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/plugins/s3"
+	"github.com/vektra/cypress/plugins/tcp"
 	"github.com/vektra/neko"
 )
 
@@ -105,7 +106,7 @@ access_key = "blah"
 
 		defer r.Close()
 
-		tcp, ok := r.plugins["TCP"].Plugin.(*cypress.TCPPlugin)
+		tcp, ok := r.plugins["TCP"].Plugin.(*tcp.TCPPlugin)
 		require.True(t, ok)
 
 		assert.Equal(t, ":8213", tcp.Address)

@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/plugins/tcp"
 )
 
 type Send struct {
@@ -20,10 +21,10 @@ func (s *Send) Execute(args []string) error {
 
 	buffer := s.Buffer
 	if buffer == 0 {
-		buffer = cypress.DefaultTCPBuffer
+		buffer = tcp.DefaultTCPBuffer
 	}
 
-	tcp, err := cypress.NewTCPSend(s.Addr, window, buffer)
+	tcp, err := tcp.NewTCPSend(s.Addr, window, buffer)
 	if err != nil {
 		return err
 	}

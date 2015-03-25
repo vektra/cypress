@@ -1,18 +1,20 @@
-package cypress
+package tcp
 
 import (
 	"io"
 	"net"
+
+	"github.com/vektra/cypress"
 )
 
 type TCPRecv struct {
 	Addr    string
-	Handler GeneratorHandler
+	Handler cypress.GeneratorHandler
 
 	l net.Listener
 }
 
-func NewTCPRecv(host string, h GeneratorHandler) (*TCPRecv, error) {
+func NewTCPRecv(host string, h cypress.GeneratorHandler) (*TCPRecv, error) {
 	return &TCPRecv{Addr: host, Handler: h}, nil
 }
 
@@ -54,7 +56,7 @@ func (t *TCPRecv) ListenAndAccept() error {
 }
 
 func (t *TCPRecv) handle(c net.Conn) {
-	recv, err := NewRecv(c)
+	recv, err := cypress.NewRecv(c)
 	if err != nil {
 		return
 	}
@@ -65,12 +67,12 @@ func (t *TCPRecv) handle(c net.Conn) {
 type TCPRecvGenerator struct {
 	*TCPRecv
 
-	buf chan *Message
+	buf chan *cypress.Message
 }
 
 func NewTCPRecvGenerator(host string) (*TCPRecvGenerator, error) {
 	g := &TCPRecvGenerator{
-		buf: make(chan *Message, 10),
+		buf: make(chan *cypress.Message, 10),
 	}
 
 	tcp, err := NewTCPRecv(host, g)
@@ -90,7 +92,7 @@ func NewTCPRecvGenerator(host string) (*TCPRecvGenerator, error) {
 	return g, nil
 }
 
-func (t *TCPRecvGenerator) Generate() (*Message, error) {
+func (t *TCPRecvGenerator) Generate() (*cypress.Message, error) {
 	m, ok := <-t.buf
 	if !ok {
 		return nil, io.EOF
@@ -106,7 +108,7 @@ func (t *TCPRecvGenerator) Close() error {
 	return nil
 }
 
-func (t *TCPRecvGenerator) HandleGenerator(g Generator) {
+func (t *TCPRecvGenerator) HandleGenerator(g cypress.Generator) {
 	for {
 		m, err := g.Generate()
 		if err != nil {

@@ -1,4 +1,4 @@
-package cypress
+package tcp
 
 import (
 	"net"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vektra/cypress"
 	"github.com/vektra/neko"
 )
 
@@ -21,7 +22,7 @@ func TestTCPSend(t *testing.T) {
 
 		defer l.Close()
 
-		var recvMesg *Message
+		var recvMesg *cypress.Message
 
 		var wg sync.WaitGroup
 
@@ -32,12 +33,12 @@ func TestTCPSend(t *testing.T) {
 			c, err := l.Accept()
 			require.NoError(t, err)
 
-			recv, err := NewRecv(c)
+			recv, err := cypress.NewRecv(c)
 
 			recvMesg, err = recv.Generate()
 		}()
 
-		m := Log()
+		m := cypress.Log()
 		m.Add("hello", "world")
 
 		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
@@ -74,7 +75,7 @@ func TestTCPSend(t *testing.T) {
 
 			defer c.Close()
 
-			recv, err := NewRecv(c)
+			recv, err := cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			<-latch
@@ -86,7 +87,7 @@ func TestTCPSend(t *testing.T) {
 			<-latch
 		}()
 
-		m := Log()
+		m := cypress.Log()
 		m.Add("hello", "world")
 
 		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
@@ -127,7 +128,7 @@ func TestTCPSend(t *testing.T) {
 
 		defer l.Close()
 
-		var recvMesg *Message
+		var recvMesg *cypress.Message
 		var wg sync.WaitGroup
 
 		latch := make(chan bool)
@@ -141,7 +142,7 @@ func TestTCPSend(t *testing.T) {
 
 			defer c.Close()
 
-			recv, err := NewRecv(c)
+			recv, err := cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			<-latch
@@ -156,7 +157,7 @@ func TestTCPSend(t *testing.T) {
 
 			defer c.Close()
 
-			recv, err = NewRecv(c)
+			recv, err = cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			recvMesg, err = recv.Generate()
@@ -165,7 +166,7 @@ func TestTCPSend(t *testing.T) {
 			latch <- true
 		}()
 
-		m := Log()
+		m := cypress.Log()
 		m.Add("hello", "world")
 
 		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
@@ -176,7 +177,7 @@ func TestTCPSend(t *testing.T) {
 		err = tcp.Receive(m)
 		require.NoError(t, err)
 
-		m2 := Log()
+		m2 := cypress.Log()
 		m2.Add("hello", "world")
 
 		err = tcp.Receive(m2)
@@ -206,7 +207,7 @@ func TestTCPSend(t *testing.T) {
 
 		defer l.Close()
 
-		var remote []*Message
+		var remote []*cypress.Message
 		var wg sync.WaitGroup
 
 		wg.Add(1)
@@ -216,7 +217,7 @@ func TestTCPSend(t *testing.T) {
 			c, err := l.Accept()
 			require.NoError(t, err)
 
-			recv, err := NewRecv(c)
+			recv, err := cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			for i := 0; i < 50; i++ {
@@ -235,7 +236,7 @@ func TestTCPSend(t *testing.T) {
 
 			defer c.Close()
 
-			recv, err = NewRecv(c)
+			recv, err = cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			for i := 0; i < 50; i++ {
@@ -251,12 +252,12 @@ func TestTCPSend(t *testing.T) {
 
 		defer tcp.Close()
 
-		var sent []*Message
+		var sent []*cypress.Message
 
 		for i := 0; i < 100; i++ {
 			time.Sleep(1 * time.Millisecond)
 
-			m := Log()
+			m := cypress.Log()
 			m.Add("iter", i)
 
 			sent = append(sent, m)
@@ -285,7 +286,7 @@ func TestTCPSend(t *testing.T) {
 
 		defer l.Close()
 
-		var remote []*Message
+		var remote []*cypress.Message
 		var wg sync.WaitGroup
 
 		wg.Add(1)
@@ -295,7 +296,7 @@ func TestTCPSend(t *testing.T) {
 			c, err := l.Accept()
 			require.NoError(t, err)
 
-			recv, err := NewRecv(c)
+			recv, err := cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			for i := 0; i < 50; i++ {
@@ -312,7 +313,7 @@ func TestTCPSend(t *testing.T) {
 			c, err = l.Accept()
 			require.NoError(t, err)
 
-			recv, err = NewRecv(c)
+			recv, err = cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			for i := 0; i < 10; i++ {
@@ -329,7 +330,7 @@ func TestTCPSend(t *testing.T) {
 
 			defer c.Close()
 
-			recv, err = NewRecv(c)
+			recv, err = cypress.NewRecv(c)
 			require.NoError(t, err)
 
 			for i := 0; i < 40; i++ {
@@ -345,12 +346,12 @@ func TestTCPSend(t *testing.T) {
 
 		defer tcp.Close()
 
-		var sent []*Message
+		var sent []*cypress.Message
 
 		for i := 0; i < 100; i++ {
 			time.Sleep(1 * time.Millisecond)
 
-			m := Log()
+			m := cypress.Log()
 			m.Add("iter", i)
 
 			sent = append(sent, m)

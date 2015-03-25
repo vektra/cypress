@@ -1,10 +1,11 @@
-package cypress
+package tcp
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vektra/cypress"
 	"github.com/vektra/neko"
 )
 
@@ -12,9 +13,9 @@ func TestTCPRecv(t *testing.T) {
 	n := neko.Start(t)
 
 	n.It("sets up generators for each new connection", func() {
-		c := make(chan Generator)
+		c := make(chan cypress.Generator)
 
-		r, err := NewTCPRecv(":0", GeneratorHandlerFunc(func(g Generator) {
+		r, err := NewTCPRecv(":0", cypress.GeneratorHandlerFunc(func(g cypress.Generator) {
 			c <- g
 		}))
 
@@ -29,7 +30,7 @@ func TestTCPRecv(t *testing.T) {
 
 		addr := r.l.Addr().String()
 
-		m := Log()
+		m := cypress.Log()
 		m.Add("hello", "world")
 
 		s, err := NewTCPSend(addr, 0, DefaultTCPBuffer)
@@ -63,7 +64,7 @@ func TestTCPRecv(t *testing.T) {
 
 		addr := gen.l.Addr().String()
 
-		m := Log()
+		m := cypress.Log()
 		m.Add("hello", "world")
 
 		go func() {

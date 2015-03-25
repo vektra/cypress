@@ -1,27 +1,29 @@
-package cypress
+package tcp
 
 import (
 	"net"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/vektra/cypress"
 )
 
 type TCPSend struct {
 	host   string
 	window int
 	c      net.Conn
-	s      *Send
+	s      *cypress.Send
 
 	lock        sync.Mutex
 	outstanding int
 
-	newMessages chan *Message
+	newMessages chan *cypress.Message
 	closed      chan bool
 
 	shutdown bool
 
-	nacked Messages
+	nacked cypress.Messages
 }
 
 const DefaultTCPBuffer = 128
@@ -32,7 +34,7 @@ func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 		return nil, err
 	}
 
-	s := NewSend(c, window)
+	s := cypress.NewSend(c, window)
 	err = s.SendHandshake()
 	if err != nil {
 		return nil, err
@@ -43,7 +45,7 @@ func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
 		window:      window,
 		c:           c,
 		s:           s,
-		newMessages: make(chan *Message, buffer),
+		newMessages: make(chan *cypress.Message, buffer),
 		closed:      make(chan bool, 1),
 	}
 
@@ -59,14 +61,14 @@ func (t *TCPSend) Close() error {
 	return t.c.Close()
 }
 
-func (t *TCPSend) Ack(m *Message) {
+func (t *TCPSend) Ack(m *cypress.Message) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.outstanding--
 }
 
-func (t *TCPSend) Nack(m *Message) {
+func (t *TCPSend) Nack(m *cypress.Message) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -83,7 +85,7 @@ func (t *TCPSend) reconnect() {
 
 	var (
 		c   net.Conn
-		s   *Send
+		s   *cypress.Send
 		err error
 	)
 
@@ -101,7 +103,7 @@ func (t *TCPSend) reconnect() {
 			continue
 		}
 
-		s = NewSend(c, t.window)
+		s = cypress.NewSend(c, t.window)
 		s.OnClosed = t.onClosed
 		err = s.SendHandshake()
 		if err != nil {
@@ -137,7 +139,7 @@ func (t *TCPSend) reconnect() {
 	}
 }
 
-func (t *TCPSend) Receive(m *Message) error {
+func (t *TCPSend) Receive(m *cypress.Message) error {
 	t.newMessages <- m
 	return nil
 }

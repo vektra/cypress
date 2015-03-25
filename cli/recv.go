@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/plugins/tcp"
 )
 
 type Recv struct {
@@ -16,7 +17,7 @@ type Recv struct {
 }
 
 func (r *Recv) Execute(args []string) error {
-	tcp, err := cypress.NewTCPRecv(r.Listen, r)
+	tcp, err := tcp.NewTCPRecv(r.Listen, r)
 	if err != nil {
 		return err
 	}

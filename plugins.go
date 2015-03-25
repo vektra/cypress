@@ -1,9 +1,6 @@
 package cypress
 
-import (
-	"net"
-	"strings"
-)
+import "strings"
 
 type Plugin interface {
 	Receiver() (Receiver, error)
@@ -23,19 +20,6 @@ func FindPlugin(name string) (Plugin, bool) {
 	}
 
 	return t(), true
-}
-
-type TCPPlugin struct {
-	Address  string
-	Listener net.Listener
-}
-
-func (r *TCPPlugin) Receiver() (Receiver, error) {
-	return NewTCPSend(r.Address, 0, DefaultTCPBuffer)
-}
-
-func (r *TCPPlugin) Generator() (Generator, error) {
-	return NewTCPRecvGenerator(r.Address)
 }
 
 type TestPlugin struct {
@@ -69,10 +53,6 @@ func (t *TestPlugin) Receive(m *Message) error {
 }
 
 func init() {
-	AddPlugin("TCP", func() Plugin {
-		return &TCPPlugin{}
-	})
-
 	AddPlugin("Test", func() Plugin {
 		t := &TestPlugin{}
 		t.Init()
