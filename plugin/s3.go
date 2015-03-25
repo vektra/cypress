@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"io"
 	"math/big"
 	"net/http"
@@ -18,8 +17,91 @@ import (
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/httputil"
 	"github.com/vektra/cypress/keystore"
+	"github.com/vektra/errors"
 	"github.com/vektra/tai64n"
 )
+
+type S3Plugin struct {
+	Dir       string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	ACL       string
+	Region    string
+}
+
+var validS3ACLs = map[string]s3.ACL{
+	"private":                   s3.Private,
+	"public-read":               s3.PublicRead,
+	"public-read-write":         s3.PublicReadWrite,
+	"authenticated-read":        s3.AuthenticatedRead,
+	"bucket-owner-read":         s3.BucketOwnerRead,
+	"bucket-owner-full-control": s3.BucketOwnerFull,
+
+	// Some more easier aliases
+	"public":      s3.PublicRead,
+	"0644":        s3.PublicRead,
+	"world-write": s3.PublicReadWrite,
+	"0666":        s3.PublicReadWrite,
+	"auth-read":   s3.AuthenticatedRead,
+	"0040":        s3.AuthenticatedRead,
+	"owner-read":  s3.BucketOwnerRead,
+	"0400":        s3.BucketOwnerRead,
+	"owner":       s3.BucketOwnerFull,
+	"0600":        s3.BucketOwnerFull,
+}
+
+var extraAWSRegions = map[string]aws.Region{}
+
+var (
+	ErrInvalidS3ACL     = errors.New("invalid s3 ACL")
+	ErrInvalidAWSRegion = errors.New("invalid AWS region")
+)
+
+func (s *S3Plugin) Receiver() (cypress.Receiver, error) {
+	auth := aws.Auth{
+		AccessKey: s.AccessKey,
+		SecretKey: s.SecretKey,
+	}
+
+	acl, ok := validS3ACLs[s.ACL]
+	if !ok {
+		return nil, errors.Subject(ErrInvalidS3ACL, s.ACL)
+	}
+
+	region, ok := aws.Regions[s.Region]
+	if !ok {
+		region, ok = extraAWSRegions[s.Region]
+
+		if !ok {
+			return nil, errors.Subject(ErrInvalidAWSRegion, s.Region)
+		}
+	}
+
+	return NewS3(s.Dir, s.Bucket, acl, auth, region)
+}
+
+func (s *S3Plugin) Generator() (cypress.Generator, error) {
+	auth := aws.Auth{
+		AccessKey: s.AccessKey,
+		SecretKey: s.SecretKey,
+	}
+
+	region, ok := aws.Regions[s.Region]
+	if !ok {
+		region, ok = extraAWSRegions[s.Region]
+
+		if !ok {
+			return nil, errors.Subject(ErrInvalidAWSRegion, s.Region)
+		}
+	}
+
+	return NewS3Generator(s.Bucket, auth, region)
+}
+
+func init() {
+	cypress.AddPlugin("S3", func() cypress.Plugin { return &S3Plugin{} })
+}
 
 type S3 struct {
 	ACL s3.ACL
@@ -291,7 +373,10 @@ func (g *S3Generator) updateList() error {
 	}
 
 	g.list = list
-	g.marker = list.Contents[len(list.Contents)-1].Key
+
+	if len(list.Contents) > 0 {
+		g.marker = list.Contents[len(list.Contents)-1].Key
+	}
 
 	return nil
 }
@@ -376,4 +461,14 @@ restart:
 	}
 
 	return m, err
+}
+
+func (g *S3Generator) Close() error {
+	g.dec.Close()
+
+	if g.response != nil && g.response.Body != nil {
+		g.response.Body.Close()
+	}
+
+	return nil
 }

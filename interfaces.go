@@ -19,6 +19,12 @@ type GeneratorHandler interface {
 	HandleGenerator(g Generator)
 }
 
+type GeneratorHandlerFunc func(g Generator)
+
+func (f GeneratorHandlerFunc) HandleGenerator(g Generator) {
+	f(g)
+}
+
 type Parser interface {
 	Parse() error
 }

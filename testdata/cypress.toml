@@ -1,0 +1,9 @@
+[TCP]
+address = ":9932"
+
+[Spool]
+directory = "tmp/spool"
+
+[route.Default]
+generate = ["TCP"]
+output = ["Spool"]

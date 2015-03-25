@@ -85,7 +85,6 @@ func NewSpool(root string) (*Spool, error) {
 	sf.current = path.Join(root, "current")
 
 	err = sf.openCurrent()
-
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +159,10 @@ func (sf *Spool) Receive(m *cypress.Message) error {
 	}
 
 	return nil
+}
+
+func (sf *Spool) Close() error {
+	return sf.file.Close()
 }
 
 func (sf *Spool) Rotate() error {
@@ -271,4 +274,25 @@ func (sg *SpoolGenerator) Close() error {
 	}
 
 	return nil
+}
+
+type SpoolPlugin struct {
+	Directory string
+}
+
+func (s *SpoolPlugin) Receiver() (cypress.Receiver, error) {
+	return NewSpool(s.Directory)
+}
+
+func (s *SpoolPlugin) Generator() (cypress.Generator, error) {
+	spool, err := NewSpool(s.Directory)
+	if err != nil {
+		return nil, err
+	}
+
+	return spool.Generator()
+}
+
+func init() {
+	cypress.AddPlugin("Spool", func() cypress.Plugin { return &SpoolPlugin{} })
 }

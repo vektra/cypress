@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -141,6 +142,14 @@ func TestS3(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, m, m2)
+	})
+
+	n.It("deals with there being no logs", func() {
+		gen, err := NewS3Generator(bucketName, awsAuth, awsRegion)
+		require.NoError(t, err)
+
+		_, err = gen.Generate()
+		require.Equal(t, err, io.EOF)
 	})
 
 	n.It("can sign the data when it's uploaded", func() {
@@ -394,6 +403,95 @@ func TestS3(t *testing.T) {
 
 		_, err = gen.Generate()
 		require.Error(t, err)
+	})
+
+	n.Meow()
+}
+
+func TestS3Plugin(t *testing.T) {
+	n := neko.Start(t)
+
+	tmpdir, err := ioutil.TempDir("", "log")
+	require.NoError(t, err)
+
+	defer os.RemoveAll(tmpdir)
+
+	var (
+		s3s       *s3test.Server
+		s3c       *s3.S3
+		awsAuth   aws.Auth
+		awsRegion aws.Region
+	)
+
+	cypress.EmptyGlobalConfig = true
+
+	bucketName := "test-logs"
+
+	n.Setup(func() {
+		var err error
+		s3s, err = s3test.NewServer(nil)
+		require.NoError(t, err)
+
+		awsRegion = aws.Region{
+			Name:                 "faux-region-1",
+			S3LocationConstraint: true,
+			S3Endpoint:           s3s.URL(),
+		}
+
+		extraAWSRegions[awsRegion.Name] = awsRegion
+
+		awsAuth = aws.Auth{AccessKey: "abc", SecretKey: "123"}
+		s3c = s3.New(awsAuth, awsRegion)
+
+		err = s3c.Bucket(bucketName).PutBucket(s3.Private)
+		require.NoError(t, err)
+	})
+
+	n.It("can create an S3 receiver", func() {
+		plug := &S3Plugin{
+			Dir:       tmpdir,
+			AccessKey: "foo",
+			SecretKey: "bar",
+			Bucket:    "xxyyzz",
+			ACL:       "public",
+			Region:    "us-west-1",
+		}
+
+		_, err := plug.Receiver()
+		require.NoError(t, err)
+	})
+
+	n.It("errors out if the acl is unknown", func() {
+		plug := &S3Plugin{
+			ACL: "blah",
+		}
+
+		_, err := plug.Receiver()
+		require.Error(t, err)
+	})
+
+	n.It("errors out if the region is unknown", func() {
+		plug := &S3Plugin{
+			ACL:    "public",
+			Region: "mars-1",
+		}
+
+		_, err := plug.Receiver()
+		require.Error(t, err)
+	})
+
+	n.It("can create an S3 generator", func() {
+		plug := &S3Plugin{
+			Dir:       tmpdir,
+			AccessKey: "foo",
+			SecretKey: "bar",
+			Bucket:    bucketName,
+			ACL:       "public",
+			Region:    awsRegion.Name,
+		}
+
+		_, err := plug.Generator()
+		require.NoError(t, err)
 	})
 
 	n.Meow()
