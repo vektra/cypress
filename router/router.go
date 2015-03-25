@@ -143,13 +143,14 @@ func (r *Router) Open() error {
 	}
 
 	err = r.wireRoutes()
-
 	if err != nil {
 		return err
 	}
 
 	for _, route := range r.routes {
-		go route.Flow()
+		if route.Enabled {
+			go route.Flow()
+		}
 	}
 
 	return nil
@@ -157,6 +158,10 @@ func (r *Router) Open() error {
 
 func (r *Router) wireRoutes() error {
 	for _, route := range r.routes {
+		if !route.Enabled {
+			continue
+		}
+
 		for _, name := range route.Generate {
 			def, ok := r.plugins[name]
 			if !ok {
