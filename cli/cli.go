@@ -35,6 +35,12 @@ func Run(args []string) int {
 
 	_, err := parser().Parse()
 	if err != nil {
+		if ferr, ok := err.(*flags.Error); ok {
+			if ferr.Type == flags.ErrHelp {
+				return 1
+			}
+		}
+
 		fmt.Printf("Error: %s\n", err)
 		return 1
 	}
