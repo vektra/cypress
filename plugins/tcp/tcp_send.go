@@ -38,9 +38,18 @@ func NewTCPSend(hosts []string, window, buffer int) (*TCPSend, error) {
 		closed:      make(chan bool, 1),
 	}
 
-	err := tcp.Connect()
-	if err != nil {
-		return nil, err
+	for {
+		err := tcp.Connect()
+		if err != nil {
+			if err == ErrNoAvailableHosts {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			return nil, err
+		}
+
+		break
 	}
 
 	go tcp.drain()
