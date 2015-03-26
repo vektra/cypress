@@ -12,7 +12,7 @@ type TCPPlugin struct {
 }
 
 func (r *TCPPlugin) Receiver() (cypress.Receiver, error) {
-	return NewTCPSend(r.Address, 0, DefaultTCPBuffer)
+	return NewTCPSend([]string{r.Address}, 0, DefaultTCPBuffer)
 }
 
 func (r *TCPPlugin) Generator() (cypress.Generator, error) {

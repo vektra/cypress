@@ -33,7 +33,7 @@ func TestTCPRecv(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		s, err := NewTCPSend(addr, 0, DefaultTCPBuffer)
+		s, err := NewTCPSend([]string{addr}, 0, DefaultTCPBuffer)
 		require.NoError(t, err)
 
 		err = s.Receive(m)
@@ -68,7 +68,7 @@ func TestTCPRecv(t *testing.T) {
 		m.Add("hello", "world")
 
 		go func() {
-			s, err := NewTCPSend(addr, 0, DefaultTCPBuffer)
+			s, err := NewTCPSend([]string{addr}, 0, DefaultTCPBuffer)
 			require.NoError(t, err)
 
 			err = s.Receive(m)

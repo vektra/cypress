@@ -41,7 +41,47 @@ func TestTCPSend(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
+		tcp, err := NewTCPSend([]string{l.Addr().String()}, 0, 0)
+		require.NoError(t, err)
+
+		defer tcp.Close()
+
+		err = tcp.Receive(m)
+		require.NoError(t, err)
+
+		wg.Wait()
+
+		assert.Equal(t, m, recvMesg)
+	})
+
+	n.It("tries servers until it finds one that works", func() {
+		l, err := net.Listen("tcp", ":0")
+		require.NoError(t, err)
+
+		defer l.Close()
+
+		var recvMesg *cypress.Message
+
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			c, err := l.Accept()
+			require.NoError(t, err)
+
+			recv, err := cypress.NewRecv(c)
+
+			recvMesg, err = recv.Generate()
+		}()
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		addrs := []string{"127.0.0.1:45001", l.Addr().String(), "127.0.0.1:45001"}
+
+		tcp, err := NewTCPSend(addrs, 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -90,7 +130,7 @@ func TestTCPSend(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
+		tcp, err := NewTCPSend([]string{l.Addr().String()}, 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -169,7 +209,7 @@ func TestTCPSend(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		tcp, err := NewTCPSend(l.Addr().String(), 0, 0)
+		tcp, err := NewTCPSend([]string{l.Addr().String()}, 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -247,7 +287,7 @@ func TestTCPSend(t *testing.T) {
 			}
 		}(l)
 
-		tcp, err := NewTCPSend(addr, 0, 0)
+		tcp, err := NewTCPSend([]string{addr}, 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()
@@ -341,7 +381,7 @@ func TestTCPSend(t *testing.T) {
 			}
 		}(l)
 
-		tcp, err := NewTCPSend(addr, 0, 0)
+		tcp, err := NewTCPSend([]string{addr}, 0, 0)
 		require.NoError(t, err)
 
 		defer tcp.Close()

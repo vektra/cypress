@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"strings"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/plugins/tcp"
@@ -24,7 +25,9 @@ func (s *Send) Execute(args []string) error {
 		buffer = tcp.DefaultTCPBuffer
 	}
 
-	tcp, err := tcp.NewTCPSend(s.Addr, window, buffer)
+	addrs := strings.Split(s.Addr, ",")
+
+	tcp, err := tcp.NewTCPSend(addrs, window, buffer)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,8 @@
 package tcp
 
 import (
+	"errors"
+	"math/rand"
 	"net"
 	"sort"
 	"sync"
@@ -10,7 +12,7 @@ import (
 )
 
 type TCPSend struct {
-	host   string
+	hosts  []string
 	window int
 	c      net.Conn
 	s      *cypress.Send
@@ -28,32 +30,58 @@ type TCPSend struct {
 
 const DefaultTCPBuffer = 128
 
-func NewTCPSend(host string, window, buffer int) (*TCPSend, error) {
-	c, err := net.Dial("tcp", host)
-	if err != nil {
-		return nil, err
-	}
-
-	s := cypress.NewSend(c, window)
-	err = s.SendHandshake()
-	if err != nil {
-		return nil, err
-	}
-
+func NewTCPSend(hosts []string, window, buffer int) (*TCPSend, error) {
 	tcp := &TCPSend{
-		host:        host,
+		hosts:       hosts,
 		window:      window,
-		c:           c,
-		s:           s,
 		newMessages: make(chan *cypress.Message, buffer),
 		closed:      make(chan bool, 1),
 	}
 
-	s.OnClosed = tcp.onClosed
+	err := tcp.Connect()
+	if err != nil {
+		return nil, err
+	}
 
 	go tcp.drain()
 
 	return tcp, nil
+}
+
+var ErrNoAvailableHosts = errors.New("no available hosts")
+
+func shuffle(a []string) {
+	for i := range a {
+		j := rand.Intn(i + 1)
+		a[i], a[j] = a[j], a[i]
+	}
+}
+
+func (t *TCPSend) Connect() error {
+	shuffle(t.hosts)
+
+	for _, host := range t.hosts {
+		c, err := net.Dial("tcp", host)
+		if err != nil {
+			continue
+		}
+
+		s := cypress.NewSend(c, t.window)
+		err = s.SendHandshake()
+		if err != nil {
+			c.Close()
+			continue
+		}
+
+		t.c = c
+		t.s = s
+
+		s.OnClosed = t.onClosed
+
+		return nil
+	}
+
+	return ErrNoAvailableHosts
 }
 
 func (t *TCPSend) Close() error {
@@ -83,16 +111,12 @@ func (t *TCPSend) onClosed() {
 func (t *TCPSend) reconnect() {
 	t.lock.Lock()
 
-	var (
-		c   net.Conn
-		s   *cypress.Send
-		err error
-	)
+	var err error
 
 	t.c.Close()
 
 	for {
-		c, err = net.Dial("tcp", t.host)
+		err = t.Connect()
 		if err != nil {
 			if t.shutdown {
 				t.lock.Unlock()
@@ -103,19 +127,8 @@ func (t *TCPSend) reconnect() {
 			continue
 		}
 
-		s = cypress.NewSend(c, t.window)
-		s.OnClosed = t.onClosed
-		err = s.SendHandshake()
-		if err != nil {
-			c.Close()
-			continue
-		}
-
 		break
 	}
-
-	t.c = c
-	t.s = s
 
 	nacked := t.nacked
 	t.nacked = nil
