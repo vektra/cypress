@@ -1,11 +1,11 @@
-package cli
+package spool
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/vektra/cypress/commands"
-	"github.com/vektra/cypress/plugins/spool"
+	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/cli/commands"
 )
 
 type InjectCommand struct {
@@ -24,19 +24,19 @@ func (i *InjectCommand) Execute(args []string) error {
 		os.MkdirAll(dir, 0755)
 	}
 
-	spool, err := spool.NewSpool(dir)
+	spool, err := NewSpool(dir)
 	if err != nil {
 		return err
 	}
 
-	inj, err := commands.NewInject(os.Stdin, spool)
+	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
 		return err
 	}
 
-	return inj.Run()
+	return cypress.Glue(dec, spool)
 }
 
 func init() {
-	addCommand("inject", "inject messages", "", &InjectCommand{})
+	commands.Add("inject", "inject messages to a spool", "", &InjectCommand{})
 }

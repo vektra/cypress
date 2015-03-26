@@ -1,6 +1,10 @@
 package cli
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/vektra/cypress/cli/commands"
+)
 
 import (
 	"sync"
@@ -21,14 +25,24 @@ func parser() *flags.Parser {
 	return globalParser
 }
 
-func addCommand(name, short, long string, cmd interface{}) {
+func AddCommand(name, short, long string, cmd interface{}) {
 	_, err := parser().AddCommand(name, short, long, cmd)
 	if err != nil {
 		panic(err)
 	}
 }
 
+func addCommand(name, short, long string, cmd interface{}) {
+	AddCommand(name, short, long, cmd)
+}
+
 func Run(args []string) int {
+	commands.SetShutdownHandler(Lifecycle)
+
+	for _, cmd := range commands.Commands {
+		AddCommand(cmd.Name, cmd.Short, cmd.Long, cmd.Cmd)
+	}
+
 	defer Lifecycle.RunCleanup()
 
 	Lifecycle.Start()

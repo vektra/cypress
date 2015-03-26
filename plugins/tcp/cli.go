@@ -1,11 +1,11 @@
-package cli
+package tcp
 
 import (
 	"os"
 	"strings"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugins/tcp"
+	"github.com/vektra/cypress/cli/commands"
 )
 
 type Send struct {
@@ -22,12 +22,12 @@ func (s *Send) Execute(args []string) error {
 
 	buffer := s.Buffer
 	if buffer == 0 {
-		buffer = tcp.DefaultTCPBuffer
+		buffer = DefaultTCPBuffer
 	}
 
 	addrs := strings.Split(s.Addr, ",")
 
-	tcp, err := tcp.NewTCPSend(addrs, window, buffer)
+	tcp, err := NewTCPSend(addrs, window, buffer)
 	if err != nil {
 		return err
 	}
@@ -40,6 +40,20 @@ func (s *Send) Execute(args []string) error {
 	return cypress.Glue(r, tcp)
 }
 
+type Recv struct {
+	Listen string `short:"l" long:"listen" description:"host:port to listen on"`
+}
+
+func (r *Recv) Execute(args []string) error {
+	tcp, err := NewTCPRecvGenerator(r.Listen)
+	if err != nil {
+		return err
+	}
+
+	return cypress.Glue(tcp, cypress.NewStreamEncoder(os.Stdout))
+}
+
 func init() {
-	addCommand("send", "send a stream to a remote place", "", &Send{})
+	commands.Add("send", "send a stream to a remote host(s)", "", &Send{})
+	commands.Add("recv", "accept streams over the network", "", &Recv{})
 }

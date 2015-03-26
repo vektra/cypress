@@ -8,4 +8,5 @@ import (
 	_ "github.com/vektra/cypress/plugins/spool"
 	_ "github.com/vektra/cypress/plugins/statsd"
 	_ "github.com/vektra/cypress/plugins/syslog"
+	_ "github.com/vektra/cypress/plugins/tcp"
 )

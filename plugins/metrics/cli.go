@@ -1,4 +1,4 @@
-package cli
+package metrics
 
 import (
 	"io/ioutil"
@@ -7,12 +7,12 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugins/metrics"
+	"github.com/vektra/cypress/cli/commands"
 )
 
 type MetricsConfig struct {
 	HTTP   string
-	Influx *metrics.InfluxConfig
+	Influx *InfluxConfig
 }
 
 type Metrics struct {
@@ -23,7 +23,7 @@ type Metrics struct {
 func (m *Metrics) Execute(args []string) error {
 	var mc MetricsConfig
 
-	mc.Influx = metrics.DefaultInfluxConfig()
+	mc.Influx = DefaultInfluxConfig()
 
 	mc.HTTP = m.HTTP
 
@@ -39,7 +39,7 @@ func (m *Metrics) Execute(args []string) error {
 		}
 	}
 
-	metrics := metrics.NewMetricSink()
+	sink := NewMetricSink()
 
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
@@ -48,26 +48,26 @@ func (m *Metrics) Execute(args []string) error {
 
 	if m.HTTP != "" {
 		log.Printf("Started HTTP server at %s", m.HTTP)
-		go metrics.RunHTTP(m.HTTP)
+		go sink.RunHTTP(m.HTTP)
 	}
 
 	if mc.Influx.URL != "" {
-		err := metrics.EnableInflux(mc.Influx)
+		err := sink.EnableInflux(mc.Influx)
 		if err != nil {
 			return err
 		}
 
 		log.Printf("Enabled InfluxDB exporter to %s", mc.Influx.URL)
 
-		Lifecycle.OnShutdown(func() {
+		commands.OnShutdown(func() {
 			log.Printf("Flushing data to InfluxDB...")
-			metrics.FlushInflux(mc.Influx)
+			sink.FlushInflux(mc.Influx)
 		})
 	}
 
-	return cypress.Glue(dec, metrics)
+	return cypress.Glue(dec, sink)
 }
 
 func init() {
-	addCommand("metrics", "collect metrics", "", &Metrics{})
+	commands.Add("metrics", "collect metrics", "", &Metrics{})
 }

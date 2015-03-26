@@ -7,7 +7,6 @@ import (
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
 	"github.com/vektra/cypress"
-	_ "github.com/vektra/cypress/plugins"
 	"github.com/vektra/errors"
 )
 

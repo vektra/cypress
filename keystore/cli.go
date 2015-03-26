@@ -1,10 +1,10 @@
-package cli
+package keystore
 
 import (
 	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/vektra/cypress/keystore"
+	"github.com/vektra/cypress/cli/commands"
 )
 
 type KeyGen struct {
@@ -14,7 +14,7 @@ type KeyGen struct {
 }
 
 func (k *KeyGen) Execute(args []string) error {
-	return keystore.GenerateKey(k.Output, k.Name)
+	return GenerateKey(k.Output, k.Name)
 }
 
 type KeyCheck struct {
@@ -24,7 +24,7 @@ type KeyCheck struct {
 }
 
 func (k *KeyCheck) Execute(args []string) error {
-	val, _, err := keystore.LoadPEM(k.Args.File)
+	val, _, err := LoadPEM(k.Args.File)
 	if err != nil {
 		return err
 	}
@@ -42,6 +42,6 @@ func (k *KeyCheck) Execute(args []string) error {
 }
 
 func init() {
-	addCommand("key:gen", "generate a new crypto key", "", &KeyGen{})
-	addCommand("key:check", "inspect a crypto key", "", &KeyCheck{})
+	commands.Add("key:gen", "generate a new crypto key", "", &KeyGen{})
+	commands.Add("key:check", "inspect a crypto key", "", &KeyCheck{})
 }

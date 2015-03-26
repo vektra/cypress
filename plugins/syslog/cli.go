@@ -1,4 +1,4 @@
-package cli
+package syslog
 
 import (
 	"fmt"
@@ -6,16 +6,16 @@ import (
 	"os"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugins/syslog"
+	"github.com/vektra/cypress/cli/commands"
 )
 
-type Syslog struct {
+type CLI struct {
 	Dgram string `long:"dgram" description:"Listen for unix diagrams at a path"`
 	TCP   string `short:"t" long:"tcp" description:"Listen on a TCP port"`
 	UDP   string `short:"u" long:"udp" description:"Listen on a UDP port"`
 }
 
-func (s *Syslog) Execute(args []string) error {
+func (s *CLI) Execute(args []string) error {
 	var cnt int
 
 	if s.Dgram != "" {
@@ -36,7 +36,7 @@ func (s *Syslog) Execute(args []string) error {
 		return err
 	}
 
-	var conn *syslog.Syslog
+	var conn *Syslog
 
 	switch {
 	case cnt == 0:
@@ -44,14 +44,14 @@ func (s *Syslog) Execute(args []string) error {
 	case cnt > 1:
 		return fmt.Errorf("specify only one method")
 	case s.Dgram != "":
-		conn, err = syslog.NewSyslogDgram(s.Dgram, r)
+		conn, err = NewSyslogDgram(s.Dgram, r)
 	case s.TCP != "":
 		l, err := net.Listen("tcp", s.TCP)
 		if err != nil {
 			return err
 		}
 
-		conn, err = syslog.NewSyslogFromListener(l, r)
+		conn, err = NewSyslogFromListener(l, r)
 	case s.UDP != "":
 		addr, err := net.ResolveUDPAddr("udp", s.UDP)
 		if err != nil {
@@ -63,12 +63,12 @@ func (s *Syslog) Execute(args []string) error {
 			return err
 		}
 
-		conn, err = syslog.NewSyslogFromConn(c, r)
+		conn, err = NewSyslogFromConn(c, r)
 	}
 
 	return conn.Run()
 }
 
 func init() {
-	addCommand("syslog", "Receive syslog messages", "", &Syslog{})
+	commands.Add("syslog", "Receive syslog messages", "", &CLI{})
 }

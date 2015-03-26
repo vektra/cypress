@@ -1,17 +1,17 @@
-package cli
+package statsd
 
 import (
 	"os"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/plugins/statsd"
+	"github.com/vektra/cypress/cli/commands"
 )
 
-type Statsd struct {
+type CLI struct {
 	Listen string `short:"l" long:"listen" default:":8125" description:"UDP host:port to listen on"`
 }
 
-func (s *Statsd) Execute(args []string) error {
+func (s *CLI) Execute(args []string) error {
 	enc := cypress.NewStreamEncoder(os.Stdout)
 
 	err := enc.Init(cypress.SNAPPY)
@@ -19,7 +19,7 @@ func (s *Statsd) Execute(args []string) error {
 		return err
 	}
 
-	ep, err := statsd.NewStatsdEndpoint(enc, s.Listen)
+	ep, err := NewStatsdEndpoint(enc, s.Listen)
 	if err != nil {
 		return err
 	}
@@ -28,5 +28,5 @@ func (s *Statsd) Execute(args []string) error {
 }
 
 func init() {
-	addCommand("statsd", "listen on statsd and generate metrics", "", &Statsd{})
+	commands.Add("statsd", "listen on statsd and generate metrics", "", &CLI{})
 }
