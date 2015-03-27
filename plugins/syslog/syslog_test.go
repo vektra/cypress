@@ -2,6 +2,7 @@ package syslog
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"log/syslog"
 	"net"
@@ -169,6 +170,148 @@ func TestSyslog(t *testing.T) {
 		require.True(t, ok)
 
 		assert.Equal(t, "this is from golang tests", msg)
+	})
+
+	n.It("parses a RFC5424 syslog message into a cypress Message", func() {
+		line := "<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - 'su root' failed for lonvick on /dev/pts/8\n"
+
+		buf := bufio.NewReader(strings.NewReader(line))
+
+		m, err := parseSyslog(buf)
+		require.NoError(t, err)
+
+		serv, ok := m.GetString("severity")
+		require.True(t, ok)
+		assert.Equal(t, "critical", serv)
+
+		fac, ok := m.GetString("facility")
+		require.True(t, ok)
+
+		assert.Equal(t, "security", fac)
+
+		ts, err := time.Parse(time.RFC3339, "2003-10-11T22:14:15.003Z")
+		require.NoError(t, err)
+
+		assert.Equal(t, tai64n.FromTime(ts), m.GetTimestamp())
+
+		host, ok := m.GetTag("host")
+		require.True(t, ok)
+
+		assert.Equal(t, "mymachine.example.com", host)
+
+		tag, ok := m.GetString("tag")
+		require.True(t, ok)
+
+		assert.Equal(t, "su", tag)
+
+		msg, ok := m.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "'su root' failed for lonvick on /dev/pts/8", msg)
+	})
+
+	n.It("parses a RFC5424 syslog message with a BOM marker", func() {
+		line := "<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - \xEF\xBB\xBF'su root' failed for lonvick on /dev/pts/8\n"
+
+		buf := bufio.NewReader(strings.NewReader(line))
+
+		m, err := parseSyslog(buf)
+		require.NoError(t, err)
+
+		serv, ok := m.GetString("severity")
+		require.True(t, ok)
+		assert.Equal(t, "critical", serv)
+
+		fac, ok := m.GetString("facility")
+		require.True(t, ok)
+
+		assert.Equal(t, "security", fac)
+
+		ts, err := time.Parse(time.RFC3339, "2003-10-11T22:14:15.003Z")
+		require.NoError(t, err)
+
+		assert.Equal(t, tai64n.FromTime(ts), m.GetTimestamp())
+
+		host, ok := m.GetTag("host")
+		require.True(t, ok)
+
+		assert.Equal(t, "mymachine.example.com", host)
+
+		tag, ok := m.GetString("tag")
+		require.True(t, ok)
+
+		assert.Equal(t, "su", tag)
+
+		msgid, ok := m.GetString("msgid")
+		require.True(t, ok)
+
+		assert.Equal(t, "ID47", msgid)
+
+		msg, ok := m.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "'su root' failed for lonvick on /dev/pts/8", msg)
+	})
+
+	n.It("parses a RFC5425 syslog message with structured data", func() {
+		line := `<165>1 2003-10-11T22:14:15.003Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] ` +
+			"\xEF\xBB\xBFAn application event log entry...\n"
+
+		buf := bufio.NewReader(strings.NewReader(line))
+
+		m, err := parseSyslog(buf)
+		require.NoError(t, err)
+
+		serv, ok := m.GetString("severity")
+		require.True(t, ok)
+		assert.Equal(t, "notice", serv)
+
+		fac, ok := m.GetString("facility")
+		require.True(t, ok)
+
+		assert.Equal(t, "local4", fac)
+
+		ts, err := time.Parse(time.RFC3339, "2003-10-11T22:14:15.003Z")
+		require.NoError(t, err)
+
+		assert.Equal(t, tai64n.FromTime(ts), m.GetTimestamp())
+
+		host, ok := m.GetTag("host")
+		require.True(t, ok)
+
+		assert.Equal(t, "mymachine.example.com", host)
+
+		tag, ok := m.GetString("tag")
+		require.True(t, ok)
+
+		assert.Equal(t, "evntslog", tag)
+
+		msgid, ok := m.GetString("msgid")
+		require.True(t, ok)
+
+		assert.Equal(t, "ID47", msgid)
+
+		fmt.Printf("msg: %s\n", m.KVString())
+
+		iut, ok := m.GetString("exampleSDID@32473.iut")
+		require.True(t, ok)
+
+		assert.Equal(t, "3", iut)
+
+		src, ok := m.GetString("exampleSDID@32473.eventSource")
+		require.True(t, ok)
+
+		assert.Equal(t, "Application", src)
+
+		eventId, ok := m.GetString("exampleSDID@32473.eventID")
+		require.True(t, ok)
+
+		assert.Equal(t, "1011", eventId)
+
+		msg, ok := m.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "An application event log entry...", msg)
 	})
 
 	n.Meow()
