@@ -7,7 +7,7 @@ cypress
 
 Cypress is a logging toolkit for creating streams of messages and transporting them.
 
-It's native streams are compressed protocol buffer: reducing bandwidth and reimproving the fidelity of log data.
+It's native streams are compressed protocol buffer: reducing bandwidth and retaining/improving the fidelity of log data.
 
 The toolkit comes with an array of handlers, capable sending streams across networks, saving them to disk, filtering them, and translating them into external formats.
 
