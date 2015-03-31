@@ -3,15 +3,27 @@ package cypress
 import (
 	"io"
 	"os"
+
+	"github.com/andrew-d/go-termutil"
 )
+
+type MessageEncoder interface {
+	Encode(m *Message) (uint64, error)
+}
 
 type StreamEncoder struct {
 	w       io.Writer
-	enc     *Encoder
+	enc     MessageEncoder
 	encoded uint64
 }
 
 func NewStreamEncoder(w io.Writer) *StreamEncoder {
+	if w == os.Stdout {
+		if termutil.Isatty(os.Stdout.Fd()) {
+			return &StreamEncoder{w: w, enc: NewKVEncoder(w)}
+		}
+	}
+
 	return &StreamEncoder{w: w, enc: NewEncoder(w)}
 }
 

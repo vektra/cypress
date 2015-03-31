@@ -50,3 +50,20 @@ func (e *Encoder) Encode(m *Message) (uint64, error) {
 
 	return uint64(sz) + 5, nil
 }
+
+type KVEncoder struct {
+	w io.Writer
+}
+
+func NewKVEncoder(w io.Writer) *KVEncoder {
+	return &KVEncoder{w}
+}
+
+func (kv *KVEncoder) Encode(m *Message) (uint64, error) {
+	str := m.KVString()
+
+	kv.w.Write([]byte(str))
+	kv.w.Write([]byte("\n"))
+
+	return uint64(len(str) + 1), nil
+}
