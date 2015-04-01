@@ -79,3 +79,13 @@ func (f *File) Generate() (*cypress.Message, error) {
 
 	return m, nil
 }
+
+func (f *File) GenerateLine() (*tail.Line, error) {
+	line := <-f.tail.Lines
+
+	if line == nil {
+		return nil, io.EOF
+	}
+
+	return line, nil
+}
