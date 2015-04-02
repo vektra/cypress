@@ -12,15 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vektra/cypress"
 	"github.com/vektra/neko"
+	"github.com/vektra/tail"
 )
 
 func TestCLI(t *testing.T) {
 	n := neko.Start(t)
 
-	tmpdir, err := ioutil.TempDir("", "file")
+	tmpdir, err := ioutil.TempDir("", "cli")
 	require.NoError(t, err)
 
 	defer os.RemoveAll(tmpdir)
+	defer tail.Cleanup()
 
 	n.It("generates a stream from lines in a file", func() {
 		var buf bytes.Buffer

@@ -3,19 +3,30 @@ package file
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
-	"sync"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
+	"github.com/vektra/tail"
 )
 
 type CLI struct {
 	Once bool   `short:"o" long:"once" description:"Read the file once, don't follow it"`
 	DB   string `short:"d" long:"offset-db" description:"Track file offsets and use them"`
 
+	Debug bool `long:"debug" description:"Output debug information to stderr"`
+
 	output io.Writer
 }
+
+type inputLine struct {
+	f    *File
+	line *tail.Line
+	path string
+}
+
+var dbgLog = log.New(os.Stderr, "cypress-file: ", log.LstdFlags)
 
 func (c *CLI) Execute(args []string) error {
 	var err error
@@ -24,89 +35,22 @@ func (c *CLI) Execute(args []string) error {
 		return fmt.Errorf("provide at least one file path")
 	}
 
-	var db *OffsetDB
+	m := NewMonitor()
+	m.Debug = c.Debug
 
 	if c.DB != "" {
-		db, err = NewOffsetDB(c.DB)
-		if err != nil {
-			return err
-		}
-	}
-
-	msgs := make(chan *cypress.Message, len(args))
-
-	var wg sync.WaitGroup
-
-	var files []*File
-
-	for _, path := range args {
-		var offset int64
-		var f *File
-
-		if c.DB != "" {
-			entry, err := db.Get(path)
-			if err != nil {
-				return err
-			}
-
-			if entry != nil && entry.Valid() {
-				offset = entry.Offset
-			}
-		}
-
-		if c.Once {
-			f, err = NewFile(path, offset)
-		} else {
-			f, err = NewFollowFile(path, offset)
-		}
-
+		err = m.OpenOffsetDB(c.DB)
 		if err != nil {
 			return err
 		}
 
-		if db != nil {
-			thisPath := path
-			commands.OnShutdown(func() {
-				offset, err := f.Tell()
-				if err == nil {
-					db.Set(thisPath, offset)
-				}
-			})
-		}
-
-		files = append(files, f)
-
-		wg.Add(1)
-		go func(path string) {
-			defer wg.Done()
-
-			if db != nil {
-				defer func() {
-					offset, err := f.Tell()
-					if err == nil {
-						err = db.Set(path, offset)
-						if err != nil {
-							fmt.Fprintf(os.Stderr, "Error updating offsetdb: %s\n", err)
-						}
-					}
-				}()
-			}
-
-			for {
-				m, err := f.Generate()
-				if err != nil {
-					return
-				}
-
-				msgs <- m
-			}
-		}(path)
+		commands.OnShutdown(m.WaitShutdown)
 	}
 
-	go func() {
-		wg.Wait()
-		close(msgs)
-	}()
+	err = m.OpenFiles(c.Once, args)
+	if err != nil {
+		return err
+	}
 
 	out := c.output
 	if out == nil {
@@ -115,19 +59,7 @@ func (c *CLI) Execute(args []string) error {
 
 	enc := cypress.NewStreamEncoder(out)
 
-	for m := range msgs {
-		err := enc.Receive(m)
-		if err != nil {
-			for _, f := range files {
-				f.Close()
-			}
-
-			wg.Wait()
-			return err
-		}
-	}
-
-	return nil
+	return m.Run(enc)
 }
 
 func init() {
