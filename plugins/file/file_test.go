@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,6 +113,11 @@ func TestFile(t *testing.T) {
 
 		f.Close()
 		os.Remove(path)
+
+		_, err = os.Stat(path)
+		require.Error(t, err)
+
+		time.Sleep(100 * time.Millisecond)
 
 		f, err = os.Create(path)
 		require.NoError(t, err)
