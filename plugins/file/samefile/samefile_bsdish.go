@@ -1,4 +1,5 @@
-// +build !windows
+// +build darwin freebsd netbsd
+
 package samefile
 
 import (
@@ -18,6 +19,8 @@ func fsHash(path string, h io.Writer) error {
 
 	binary.Write(h, binary.BigEndian, fstat.Ino)
 	binary.Write(h, binary.BigEndian, fstat.Dev)
+	binary.Write(h, binary.BigEndian, fstat.Ctimespec.Sec)
+	binary.Write(h, binary.BigEndian, fstat.Ctimespec.Nsec)
 
 	return nil
 }
