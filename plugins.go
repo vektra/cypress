@@ -1,6 +1,14 @@
 package cypress
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+var (
+	ErrNoReceiver  = errors.New("no receiever available")
+	ErrNoGenerator = errors.New("no generator available")
+)
 
 type Plugin interface {
 	Receiver() (Receiver, error)

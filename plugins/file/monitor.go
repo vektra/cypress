@@ -7,6 +7,7 @@ import (
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
+	"gopkg.in/tomb.v2"
 )
 
 type inputLine struct {
@@ -194,4 +195,36 @@ func (m *Monitor) Run(enc cypress.Receiver) error {
 	}
 
 	return nil
+}
+
+type MonitorGenerator struct {
+	m *Monitor
+	t tomb.Tomb
+	c cypress.Channel
+}
+
+func (m *MonitorGenerator) start() {
+	m.t.Go(m.run)
+}
+
+func (m *MonitorGenerator) run() error {
+	return m.m.Run(m.c)
+}
+
+func (m *MonitorGenerator) Generate() (*cypress.Message, error) {
+	return m.c.Generate()
+}
+
+func (m *MonitorGenerator) Close() error {
+	m.t.Kill(io.EOF)
+	m.m.WaitShutdown()
+	m.t.Wait()
+
+	return nil
+}
+
+func (m *Monitor) Generator() (*MonitorGenerator, error) {
+	g := &MonitorGenerator{m: m, c: make(cypress.Channel)}
+	g.start()
+	return g, nil
 }
