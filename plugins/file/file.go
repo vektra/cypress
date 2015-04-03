@@ -81,6 +81,8 @@ func (f *File) readOnce() error {
 		case <-f.t.Dying():
 			return nil
 		}
+
+		offset += int64(len(str))
 	}
 
 	return nil
@@ -155,6 +157,8 @@ top:
 
 							buf = bufio.NewReader(r)
 
+							offset = 0
+
 							continue top
 						}
 					}
@@ -168,9 +172,13 @@ top:
 
 		select {
 		case f.lines <- Line{str, offset, time.Now()}:
+			// nothing
+
 		case <-f.t.Dying():
 			return nil
 		}
+
+		offset += int64(len(str))
 	}
 
 	return nil

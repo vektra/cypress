@@ -222,5 +222,58 @@ func TestFile(t *testing.T) {
 
 		assert.Equal(t, "line 2 after the break", msg2)
 	})
+
+	n.It("tracks the offset of lines", func() {
+		path := filepath.Join(tmpdir, "blah.log")
+
+		f, err := os.Create(path)
+		require.NoError(t, err)
+
+		defer f.Close()
+		defer os.Remove(path)
+
+		fmt.Fprint(f, "line 1 has stuff\nline 2 as well\n")
+
+		fo, err := NewFile(path, 0)
+		require.NoError(t, err)
+
+		l1, err := fo.GenerateLine()
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, l1.Offset)
+
+		l2, err := fo.GenerateLine()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(l1.Line), l2.Offset)
+	})
+
+	n.It("tracks the offset of lines when following", func() {
+		path := filepath.Join(tmpdir, "blah.log")
+
+		f, err := os.Create(path)
+		require.NoError(t, err)
+
+		defer f.Close()
+		defer os.Remove(path)
+
+		fmt.Fprint(f, "line 1 has stuff\nline 2 as well\n")
+
+		fo, err := NewFollowFile(path, 0)
+		require.NoError(t, err)
+
+		defer fo.Close()
+
+		l1, err := fo.GenerateLine()
+		require.NoError(t, err)
+
+		assert.Equal(t, 0, l1.Offset)
+
+		l2, err := fo.GenerateLine()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(l1.Line), l2.Offset)
+	})
+
 	n.Meow()
 }
