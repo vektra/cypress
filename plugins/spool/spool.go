@@ -39,7 +39,7 @@ const MaxFiles = 10
 const DefaultSpoolDir = "/var/lib/cypress/spool"
 
 func (sf *Spool) openCurrent() error {
-	fd, err := os.OpenFile(sf.current, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	fd, err := os.OpenFile(sf.current, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
@@ -57,6 +57,11 @@ func (sf *Spool) openCurrent() error {
 
 	if sf.startSize == 0 {
 		err = enc.Init(cypress.SNAPPY)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = enc.OpenFile(fd)
 		if err != nil {
 			return err
 		}
