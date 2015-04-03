@@ -3,6 +3,7 @@ package router
 import (
 	"io"
 	"io/ioutil"
+	"log"
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -206,18 +207,24 @@ func (r *Route) Flow() {
 
 	for _, g := range r.generators {
 		go func(g cypress.Generator) {
-			msg, err := g.Generate()
-			if err != nil {
-				return
-			}
+			for {
+				msg, err := g.Generate()
+				if err != nil {
+					log.Printf("Error generating messages: %s", err)
+					return
+				}
 
-			c <- msg
+				c <- msg
+			}
 		}(g)
 	}
 
 	for msg := range c {
 		for _, recv := range r.receivers {
-			recv.Receive(msg)
+			err := recv.Receive(msg)
+			if err != nil {
+				log.Printf("Error sending messages: %s", err)
+			}
 		}
 	}
 }
