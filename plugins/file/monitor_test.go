@@ -122,6 +122,11 @@ func TestMonitor(t *testing.T) {
 
 		f.Close()
 
+		entry, err = db.Get(file1)
+		require.NoError(t, err)
+
+		assert.True(t, entry.Valid())
+
 		m = NewMonitor()
 
 		var buf2 cypress.BufferReceiver
