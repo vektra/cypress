@@ -2,11 +2,18 @@ package file
 
 import (
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
 )
+
+type inputLine struct {
+	f    *File
+	line *Line
+	path string
+}
 
 type Monitor struct {
 	db      *OffsetDB
@@ -170,7 +177,7 @@ func (m *Monitor) Run(enc cypress.Receiver) error {
 			msg := cypress.Log()
 			msg.Timestamp = tai64n.FromTime(il.line.Time)
 			msg.AddTag("source", il.f.name)
-			msg.Add("message", il.line.Text)
+			msg.Add("message", strings.TrimSpace(il.line.Line))
 
 			err := enc.Receive(msg)
 			if err != nil {
@@ -182,7 +189,7 @@ func (m *Monitor) Run(enc cypress.Receiver) error {
 				return err
 			}
 
-			m.offsets[il.path] = il.line.Offset + il.line.Size
+			m.offsets[il.path] = il.line.Next()
 		}
 	}
 

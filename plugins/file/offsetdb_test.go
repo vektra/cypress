@@ -129,7 +129,7 @@ func TestOffsetDB(t *testing.T) {
 		_, err = os.Stat(fp)
 		require.Error(t, err)
 
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		f, err = os.Create(fp)
 		require.NoError(t, err)

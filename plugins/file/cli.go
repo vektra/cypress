@@ -8,7 +8,6 @@ import (
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
-	"github.com/vektra/tail"
 )
 
 type CLI struct {
@@ -18,12 +17,6 @@ type CLI struct {
 	Debug bool `long:"debug" description:"Output debug information to stderr"`
 
 	output io.Writer
-}
-
-type inputLine struct {
-	f    *File
-	line *tail.Line
-	path string
 }
 
 var dbgLog = log.New(os.Stderr, "cypress-file: ", log.LstdFlags)
