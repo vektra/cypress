@@ -31,17 +31,13 @@ func (rt *Router) Execute(args []string) error {
 		return err
 	}
 
-	defer r.Close()
-
 	fmt.Printf("Router loaded and running\n%d routes active\n", len(r.Routes()))
 
-	c := make(chan bool)
-
 	Lifecycle.OnShutdown(func() {
-		c <- true
+		r.Close()
 	})
 
-	<-c
+	select {}
 
 	return nil
 }
