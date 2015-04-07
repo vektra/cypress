@@ -1,9 +1,10 @@
-package postgresql
+package postgres
 
 import (
 	"database/sql"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/vektra/cypress"
 )
 
@@ -41,15 +42,15 @@ type ResultInterface interface {
 	RowsAffected() (int64, error)
 }
 
-type PostgreSQL struct {
+type Postgres struct {
 	DB DBInterface
 }
 
-func (p *PostgreSQL) Init(db DBInterface) {
+func (p *Postgres) Init(db DBInterface) {
 	p.DB = db
 }
 
-func (p *PostgreSQL) SetupDB() error {
+func (p *Postgres) SetupDB() error {
 	err := p.DB.Ping()
 	if err != nil {
 		return err
@@ -70,7 +71,7 @@ func (p *PostgreSQL) SetupDB() error {
 	return nil
 }
 
-func (p *PostgreSQL) Receive(m *cypress.Message) error {
+func (p *Postgres) Receive(m *cypress.Message) error {
 	_, err := p.DB.Exec(cAddRow,
 		m.GetTimestamp().Time().Format(time.RFC3339Nano),
 		m.Version,

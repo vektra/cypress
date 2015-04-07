@@ -1,4 +1,4 @@
-package postgresql
+package postgres
 
 import (
 	"database/sql"
@@ -13,8 +13,8 @@ import (
 	"github.com/vektra/neko"
 )
 
-const cUser = "TEST_POSTGRESQL_USER"
-const cDBName = "TEST_POSTGRESQL_DB_NAME"
+const cUser = "TEST_POSTGRES_USER"
+const cDBName = "TEST_POSTGRES_DB_NAME"
 
 const cDropTable = `
 DROP TABLE IF EXISTS cypress_messages
@@ -49,7 +49,7 @@ func TestPostgresql(t *testing.T) {
 	n.CheckMock(&db.Mock)
 
 	n.It("sets up a db", func() {
-		var p PostgreSQL
+		var p Postgres
 		p.Init(&db)
 
 		db.On("Ping").Return(nil)
@@ -62,7 +62,7 @@ func TestPostgresql(t *testing.T) {
 	})
 
 	n.It("receives a message", func() {
-		var p PostgreSQL
+		var p Postgres
 		p.Init(&db)
 
 		msg := cypress.Log()
@@ -83,7 +83,7 @@ func TestPostgresql(t *testing.T) {
 	n.Meow()
 }
 
-func TestPostgreSQLOnline(t *testing.T) {
+func TestPostgresOnline(t *testing.T) {
 	n := neko.Start(t)
 
 	user := os.Getenv(cUser)
@@ -108,7 +108,7 @@ func TestPostgreSQLOnline(t *testing.T) {
 	}
 
 	n.It("sets up a db", func() {
-		var p PostgreSQL
+		var p Postgres
 		p.Init(db)
 
 		var hstore string
@@ -135,7 +135,7 @@ func TestPostgreSQLOnline(t *testing.T) {
 	})
 
 	n.It("receives a message", func() {
-		var p PostgreSQL
+		var p Postgres
 		p.Init(db)
 
 		var err error
