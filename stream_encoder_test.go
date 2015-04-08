@@ -26,7 +26,7 @@ func TestStreamEncoder(t *testing.T) {
 	})
 
 	n.It("writes a header", func() {
-		err := se.WriteHeader(SNAPPY)
+		err := se.Init(SNAPPY)
 		require.NoError(t, err)
 
 		hdr := &StreamHeader{}

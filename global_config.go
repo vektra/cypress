@@ -10,19 +10,24 @@ import (
 
 var globalConfig *Config
 
+// Paths that can hold the global config
 var GlobalConfigPaths []string
 
+// Paths that, if they exist, are added to GlobalConfigPaths
 var PotentialGlobalConfigPaths = []string{
 	"/etc/cypress/config",
 	"/var/lib/cypress/config",
 }
 
+// The path under a users home for the user config
 var UserConfigPath = ".cypress/config"
 
 var globalConfigLoaded sync.Once
 
+// Whether or not to load the global Config from paths
 var EmptyGlobalConfig bool
 
+// Load and return the global Config
 func GlobalConfig() *Config {
 	globalConfigLoaded.Do(func() {
 		if EmptyGlobalConfig {

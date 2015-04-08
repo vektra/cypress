@@ -7,10 +7,16 @@ import (
 	"code.google.com/p/snappy-go/snappy"
 )
 
+// No compression is applied
 var NONE = StreamHeader_NONE
+
+// Snappy compression is used
 var SNAPPY = StreamHeader_SNAPPY
+
+// ZLib compression is used
 var ZLIB = StreamHeader_ZLIB
 
+// Given a compression level, return a wrapped Writer
 func WriteCompressed(w io.Writer, comp StreamHeader_Compression) io.Writer {
 	switch comp {
 	case StreamHeader_NONE:
@@ -24,6 +30,7 @@ func WriteCompressed(w io.Writer, comp StreamHeader_Compression) io.Writer {
 	}
 }
 
+// Given a compression level, return a wrapped Reader
 func ReadCompressed(r io.Reader, comp StreamHeader_Compression) io.Reader {
 	switch comp {
 	case StreamHeader_NONE:

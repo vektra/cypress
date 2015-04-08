@@ -1,67 +1,31 @@
 package cypress
 
-import (
-	"errors"
-
-	"github.com/vektra/tai64n"
-)
-
+// A core interface, represending a type that can take a Message
 type Receiver interface {
 	Receive(msg *Message) error
 }
 
+// A core interface, representing a type that can create a Message
 type Generator interface {
 	Generate() (*Message, error)
 	Close() error
 }
 
+// Use to allow types to handle new Generators as they're created
 type GeneratorHandler interface {
 	HandleGenerator(g Generator)
 }
 
+// A GeneratorHandler that just calls itself as a function
 type GeneratorHandlerFunc func(g Generator)
 
 func (f GeneratorHandlerFunc) HandleGenerator(g Generator) {
 	f(g)
 }
 
-type Parser interface {
-	Parse() error
-}
-
+// Used by Send to allow a sender to interact with the Message
+// transmit and ack lifecycle
 type SendRequest interface {
 	Ack(*Message)
 	Nack(*Message)
-}
-
-type Sender interface {
-	Send(m *Message, req SendRequest) error
-}
-
-type SendMaker interface {
-	NewSender(window int) (Sender, error)
-}
-
-var ErrStopIteration = errors.New("stop iteration")
-
-type LogHandlerFunc func(*Message) error
-
-func (l LogHandlerFunc) HandleMessage(m *Message) error {
-	return l(m)
-}
-
-func LogHandleFunc(f func(*Message) error) LogHandlerFunc {
-	return LogHandlerFunc(f)
-}
-
-type LogHandler interface {
-	HandleMessage(m *Message) error
-}
-
-type LogViewer interface {
-	StreamIndex(index string, value interface{}, count uint64, h LogHandler) error
-	TailIndex(index string, value interface{}, count uint64, h LogHandler) error
-
-	StreamMatching(from *tai64n.TAI64N, crit Criteria, h LogHandler) error
-	TailMatching(from *tai64n.TAI64N, crit Criteria, h LogHandler) error
 }

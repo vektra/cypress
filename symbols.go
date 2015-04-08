@@ -2,6 +2,10 @@ package cypress
 
 import "fmt"
 
+// Symbols is used to minimize attribute key values by using preset keys.
+// Each message version in the wild has a symbol set, allowing for symbol
+// set evolution.
+
 type symbols struct {
 	StrToIndex map[string]uint32
 	IndexToStr []string

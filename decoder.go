@@ -9,6 +9,8 @@ import (
 
 type typeDecoder func(d *Decoder) (*Message, error)
 
+// A type that, given a stream of many shapes, decodes it and generates
+// Messages.
 type Decoder struct {
 	r *bufio.Reader
 
@@ -18,12 +20,14 @@ type Decoder struct {
 	js *json.Decoder
 }
 
+// Create a new Decoder reading data from r
 func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{
 		r: bufio.NewReader(r),
 	}
 }
 
+// Peek at the input and detect the stream type
 func (d *Decoder) probe() error {
 	b, err := d.r.ReadByte()
 	if err != nil {
@@ -51,6 +55,7 @@ func (d *Decoder) probe() error {
 	return nil
 }
 
+// Decode the next Message in the stream
 func (d *Decoder) Decode() (*Message, error) {
 	if d.decoder == nil {
 		err := d.probe()
@@ -62,6 +67,7 @@ func (d *Decoder) Decode() (*Message, error) {
 	return d.decoder(d)
 }
 
+// Decodes messages encoded in the native protobuf format
 func decodeNative(d *Decoder) (*Message, error) {
 	b, err := d.r.ReadByte()
 	if err != nil {
@@ -104,10 +110,12 @@ func decodeNative(d *Decoder) (*Message, error) {
 	return m, nil
 }
 
+// Decodes messages in the native Key/Value format
 func decodeKV(d *Decoder) (*Message, error) {
 	return d.kv.Generate()
 }
 
+// Decodes messages in JSON format
 func decodeJSON(d *Decoder) (*Message, error) {
 	m := &Message{}
 

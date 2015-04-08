@@ -3,7 +3,6 @@ package cypress
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,38 +16,55 @@ import (
 	"github.com/vektra/tai64n"
 )
 
+// Type code representing a generic log message
 const LOG = 0
+
+// Type code for a metric
 const METRIC = 1
+
+// Type code for an application trace
 const TRACE = 2
+
+// Type code for an audit (ie, high value log) message
 const AUDIT = 3
+
+// Type code for a heartbeat, representing liveness.
 const HEARTBEAT = 4
 
+// The default version of messages generated
 const DEFAULT_VERSION = 1
 
+// Create a new Message
 func NewMessage() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now()}
 }
 
+// Create a new Message of type LOG
 func Log() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(LOG)}
 }
 
+// Create a new Message of type METRIC
 func Metric() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(METRIC)}
 }
 
+// Create a new Message of type TRACE
 func Trace() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(TRACE)}
 }
 
+// Create a new Message of type AUDIT
 func Audit() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(AUDIT)}
 }
 
+// Create a new Message of type HEARTBEAT
 func Heartbeat() *Message {
 	return &Message{Version: DEFAULT_VERSION, Timestamp: tai64n.Now(), Type: proto.Uint32(HEARTBEAT)}
 }
 
+// Return the Message type as a string
 func (m *Message) StringType() string {
 	switch m.GetType() {
 	case LOG:
@@ -64,11 +80,6 @@ func (m *Message) StringType() string {
 	default:
 		return "unknown"
 	}
-}
-
-func (m *Message) ProtoShow() {
-	proto.MarshalText(os.Stdout, m)
-	os.Stdout.Write([]byte("\n"))
 }
 
 func subsecond(s uint32) string {
@@ -97,6 +108,7 @@ func strquote(in string) string {
 	return strings.Replace(in, `"`, `\"`, -1)
 }
 
+// Return the Message's tags as a string formatted for use in Postgresql HSTORE
 func (m *Message) HstoreTags() string {
 	var buf bytes.Buffer
 
@@ -105,6 +117,7 @@ func (m *Message) HstoreTags() string {
 	return buf.String()
 }
 
+// Write a Message's tags formatted for Postgresql HSTORE into a buffer
 func (m *Message) HstoreTagsInto(buf *bytes.Buffer) {
 	for i, tag := range m.Tags {
 		buf.WriteString("\"")
@@ -124,6 +137,7 @@ func (m *Message) HstoreTagsInto(buf *bytes.Buffer) {
 	}
 }
 
+// Return the Message's attributes as a string formatted for use in Postgresql HSTORE
 func (m *Message) HstoreAttributes() string {
 	var buf bytes.Buffer
 
@@ -132,6 +146,7 @@ func (m *Message) HstoreAttributes() string {
 	return buf.String()
 }
 
+// Write a Message's attributes formatted for Postgresql HSTORE into a buffer
 func (m *Message) HstoreAttributesInto(buf *bytes.Buffer) {
 	for i, attr := range m.Attributes {
 		buf.WriteString("\"")
@@ -171,6 +186,7 @@ func (m *Message) HstoreAttributesInto(buf *bytes.Buffer) {
 	}
 }
 
+// Return the Message's attributes as a KV formatted string
 func (m *Message) KVPairs() string {
 	var buf bytes.Buffer
 
@@ -179,6 +195,7 @@ func (m *Message) KVPairs() string {
 	return buf.String()
 }
 
+// Write a Message's attributes in KV format to a buffer
 func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 	for _, attr := range m.Attributes {
 		buf.WriteString(" ")
@@ -213,6 +230,7 @@ func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 	}
 }
 
+// Return the Message as a KV formatted string
 func (m *Message) KVString() string {
 	var buf bytes.Buffer
 
@@ -221,6 +239,7 @@ func (m *Message) KVString() string {
 	return buf.String()
 }
 
+// Write a Message in KV format to a buffer
 func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	buf.WriteString(">")
 	switch {
@@ -247,6 +266,7 @@ func (m *Message) KVStringInto(buf *bytes.Buffer) {
 	m.KVPairsInto(buf)
 }
 
+// Write a Message's tags in KV format to a buffer
 func (m *Message) KVTagsInto(buf *bytes.Buffer) {
 	if len(m.Tags) > 0 {
 		buf.WriteString(" [")
@@ -277,6 +297,10 @@ var voltColor = ansi.ColorCode("blue")
 var systemColor = ansi.ColorCode("yellow")
 var resetColor = ansi.ColorCode("reset")
 
+// Return a Message formatted as a syslog string.
+// colorize indicates if ANSI color codes should be used to highlight portions.
+// align controls if time field is aligned to 35 bytes (useful for when
+// a set of messages are displayed on lines next to eachother).
 func (m *Message) SyslogString(colorize bool, align bool) string {
 	var buf bytes.Buffer
 
@@ -361,6 +385,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 	return buf.String()
 }
 
+// Return a Message as a string formatted for easy human reading
 func (m *Message) HumanString() string {
 	var buf bytes.Buffer
 
@@ -392,6 +417,7 @@ func (m *Message) HumanString() string {
 	return buf.String()
 }
 
+// Return the key as a string of this Attribute within Message m
 func (a *Attribute) StringKey(m *Message) string {
 	if a.Key != 0 {
 		return versionSymbols[m.Version].FromIndex(a.Key)
@@ -404,6 +430,7 @@ func (a *Attribute) StringKey(m *Message) string {
 	return *a.Skey
 }
 
+// Find an Attribute by name and return it's value.
 func (m *Message) Get(key string) (interface{}, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -436,6 +463,7 @@ func (m *Message) Get(key string) (interface{}, bool) {
 	return nil, false
 }
 
+// Find an Attibute by name that is an int and return it
 func (m *Message) GetInt(key string) (int64, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -450,6 +478,7 @@ func (m *Message) GetInt(key string) (int64, bool) {
 	return 0, false
 }
 
+// Find an Attibute by name that is a float and return it
 func (m *Message) GetFloat(key string) (float64, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -464,6 +493,7 @@ func (m *Message) GetFloat(key string) (float64, bool) {
 	return 0, false
 }
 
+// Find an Attibute by name that is a string and return it
 func (m *Message) GetString(key string) (string, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -478,6 +508,7 @@ func (m *Message) GetString(key string) (string, bool) {
 	return "", false
 }
 
+// Find an Attibute by name that is a byte slice and return it
 func (m *Message) GetBytes(key string) ([]byte, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -492,6 +523,7 @@ func (m *Message) GetBytes(key string) ([]byte, bool) {
 	return nil, false
 }
 
+// Find an Attibute by name that is an Interval and return it
 func (m *Message) GetInterval(key string) (*Interval, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -506,6 +538,7 @@ func (m *Message) GetInterval(key string) (*Interval, bool) {
 	return nil, false
 }
 
+// Find an Attibute by name that is a boolean and return it
 func (m *Message) GetBool(key string) (bool, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
@@ -520,20 +553,25 @@ func (m *Message) GetBool(key string) (bool, bool) {
 	return false, false
 }
 
+// Set the SessionID of a Message
 func (m *Message) For(id string) {
 	m.SessionId = &id
 }
 
+// Error indicating that the value type and the attribute type mismatch
 var ErrBadValue = errors.New("Invalid type for attribute value")
 
+// Used to convert a value into an int64
 type Inter interface {
 	Int() int64
 }
 
+// Used to convert a valeu into a string
 type Stringer interface {
 	String() string
 }
 
+// Add a tag to the Message
 func (m *Message) AddTag(key string, val string) {
 	var tag *Tag
 
@@ -556,6 +594,7 @@ func (m *Message) AddTag(key string, val string) {
 	}
 }
 
+// Return the value of a tag
 func (m *Message) GetTag(key string) (string, bool) {
 	for _, t := range m.Tags {
 		if t.Name == key {
@@ -570,6 +609,16 @@ func (m *Message) GetTag(key string) (string, bool) {
 	return "", false
 }
 
+// Add a new attribute to the Message. The type of the attribute is infered
+// from the type of val.
+// This understands:
+//    int, int32, uint32, int64, uint64, Inter
+//    float32, float64,
+//    string, Stringer
+//    time.Duration
+//    []byte
+//    error
+//    A slice, array, map, or struct containing any understood type
 func (m *Message) Add(key string, val interface{}) error {
 	attr := &Attribute{}
 
@@ -699,6 +748,11 @@ var (
 	cachedFieldNamesRW = new(sync.RWMutex)
 )
 
+// Add many attributes to the Message. vals is pairs of (key, value)
+// For example:
+//    m.AddMany("name", "evan", "age", 35)
+// This creates an attributed with a key of "name" and a value of "evan"
+// and "age" with a value of 35.
 func (m *Message) AddMany(vals ...interface{}) error {
 	if len(vals)%2 != 0 {
 		panic("Passed an uneven number of values to Send")
@@ -719,6 +773,7 @@ func (m *Message) AddMany(vals ...interface{}) error {
 	return nil
 }
 
+// Set the key (ie, the name) of an Attribute.
 func (attr *Attribute) SetKey(m *Message, key string) {
 	if val, ok := versionSymbols[m.Version].FindIndex(key); ok {
 		attr.Key = val
@@ -727,6 +782,7 @@ func (attr *Attribute) SetKey(m *Message, key string) {
 	}
 }
 
+// Add an Attribute of type int64
 func (m *Message) AddInt(key string, val int64) error {
 	attr := &Attribute{}
 
@@ -737,6 +793,7 @@ func (m *Message) AddInt(key string, val int64) error {
 	return nil
 }
 
+// Add an Attribute of type float64
 func (m *Message) AddFloat(key string, val float64) error {
 	attr := &Attribute{}
 
@@ -747,6 +804,7 @@ func (m *Message) AddFloat(key string, val float64) error {
 	return nil
 }
 
+// Add an Attribute of type string
 func (m *Message) AddString(key string, val string) error {
 	attr := &Attribute{}
 
@@ -757,6 +815,7 @@ func (m *Message) AddString(key string, val string) error {
 	return nil
 }
 
+// Add an Attribute of type bytes
 func (m *Message) AddBytes(key string, val []byte) error {
 	attr := &Attribute{}
 
@@ -767,6 +826,7 @@ func (m *Message) AddBytes(key string, val []byte) error {
 	return nil
 }
 
+// Add an Attribute of type Internal
 func (m *Message) AddInterval(key string, sec uint64, nsec uint32) error {
 	attr := &Attribute{}
 
@@ -799,6 +859,7 @@ func (i *Interval) Duration() time.Duration {
 		(time.Duration(i.Nanoseconds) * time.Nanosecond)
 }
 
+// Add an Attribute of type Internal from a time.Duration
 func (m *Message) AddDuration(key string, dur time.Duration) error {
 	attr := &Attribute{}
 

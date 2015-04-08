@@ -5,16 +5,20 @@ import (
 	"io"
 )
 
+// A type which encodes messages given to it in native protobuf format
+// and writes them out.
 type Encoder struct {
 	w io.Writer
 }
 
+// Create an Encoder that will write it's output to w
 func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{
 		w: w,
 	}
 }
 
+// Encode and write a Message
 func (e *Encoder) Encode(m *Message) (uint64, error) {
 	sz := m.Size()
 
@@ -51,14 +55,17 @@ func (e *Encoder) Encode(m *Message) (uint64, error) {
 	return uint64(sz) + 5, nil
 }
 
+// An encoder that writes messages in Key/Value format
 type KVEncoder struct {
 	w io.Writer
 }
 
+// Create a KVEncoder that writes it's output to w
 func NewKVEncoder(w io.Writer) *KVEncoder {
 	return &KVEncoder{w}
 }
 
+// Encode and write a message
 func (kv *KVEncoder) Encode(m *Message) (uint64, error) {
 	str := m.KVString()
 

@@ -2,6 +2,7 @@ package cypress
 
 import "io"
 
+// Read messages from gen and send them to recv
 func Glue(gen Generator, recv Receiver) error {
 	for {
 		m, err := gen.Generate()

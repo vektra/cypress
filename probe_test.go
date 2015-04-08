@@ -18,7 +18,7 @@ func TestProbe(t *testing.T) {
 
 		enc := NewStreamEncoder(&buf)
 
-		enc.WriteHeader(SNAPPY)
+		enc.Init(SNAPPY)
 
 		probe := NewProbe(&buf)
 
@@ -33,7 +33,7 @@ func TestProbe(t *testing.T) {
 
 		enc := NewStreamEncoder(&buf)
 
-		enc.WriteHeader(SNAPPY)
+		enc.Init(SNAPPY)
 
 		probe := NewProbe(&buf)
 

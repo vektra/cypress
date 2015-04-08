@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +88,7 @@ func TestParseKVStream(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -104,7 +105,7 @@ func TestParseKVStreamSkipNonLogLine(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\nblah blah\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -121,7 +122,7 @@ func TestParseKVStreamAfterBlankLine(t *testing.T) {
 	line := "\n> id=1 size=171 for=\"-\"\nblah blah\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -138,7 +139,7 @@ func TestParseKVStreamAfterJunkAndBlankLine(t *testing.T) {
 	line := "blahblah\n\n> id=1 size=171 for=\"-\"\nblah blah\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -155,7 +156,7 @@ func TestParseKVStreamBadLogLine(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\n> id=2 blah blah\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -172,7 +173,7 @@ func TestParseKVStreamMetric(t *testing.T) {
 	line := ">! id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -191,7 +192,7 @@ func TestParseKVStreamTrace(t *testing.T) {
 	line := ">$ id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -210,7 +211,7 @@ func TestParseKVStreamAudit(t *testing.T) {
 	line := ">* id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -229,7 +230,7 @@ func TestParseKVStreamHeartbeat(t *testing.T) {
 	line := ">? [host=\"foo\"]"
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -247,7 +248,7 @@ func TestParseKVWithBare(t *testing.T) {
 	line := "> id=1 size=171 for=\"-\"\nerror bad stuff\n> id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	parser := NewKVParser(buf)
 	parser.Bare = true
@@ -265,7 +266,7 @@ func TestParseKVStreamPreStamped(t *testing.T) {
 	line := "> @40000000521BBC7D163ED116 id=1 size=171 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -280,7 +281,7 @@ func TestMessageKVString(t *testing.T) {
 	line := "> @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -297,7 +298,7 @@ func TestMessageKVStringTimestamp(t *testing.T) {
 	line := "> id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -316,7 +317,7 @@ func TestMessageKVStringMetric(t *testing.T) {
 	line := ">! @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -333,7 +334,7 @@ func TestMessageKVTrace(t *testing.T) {
 	line := ">$ @40000000521BBC7D163ED116 id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -350,7 +351,7 @@ func TestMessageKVStringIncludeTags(t *testing.T) {
 	line := "> @40000000521BBC7D163ED116 [region=\"us-west-1\"] id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -367,7 +368,7 @@ func TestMessageKVStringIncludeValuelessTags(t *testing.T) {
 	line := "> @40000000521BBC7D163ED116 [region=\"us-west-1\" !secure] id=1 time=:1.001 for=\"-\""
 
 	buf := bytes.NewReader([]byte(line))
-	var mbuf MessageBuffer
+	var mbuf BufferReceiver
 
 	ParseKVStream(buf, &mbuf)
 
@@ -385,7 +386,7 @@ func TestAddSlice(t *testing.T) {
 	err := m.Add("things", []string{"one", "two", "three"})
 	require.NoError(t, err)
 
-	data, err := ToProtobuf(m)
+	data, err := m.Marshal()
 	require.NoError(t, err)
 
 	m2, err := FromProtobuf(data)
@@ -412,7 +413,7 @@ func TestAddArray(t *testing.T) {
 	err := m.Add("things", [3]string{"one", "two", "three"})
 	require.NoError(t, err)
 
-	data, err := ToProtobuf(m)
+	data, err := m.Marshal()
 	require.NoError(t, err)
 
 	m2, err := FromProtobuf(data)
@@ -439,7 +440,7 @@ func TestAddMap(t *testing.T) {
 	err := m.Add("things", map[string]int{"one": 1, "two": 2, "three": 3})
 	require.NoError(t, err)
 
-	data, err := ToProtobuf(m)
+	data, err := m.Marshal()
 	require.NoError(t, err)
 
 	m2, err := FromProtobuf(data)
@@ -471,7 +472,7 @@ func TestAddStruct(t *testing.T) {
 	err := m.Add("things", simpleThing{Name: "test", Age: 18})
 	require.NoError(t, err)
 
-	data, err := ToProtobuf(m)
+	data, err := m.Marshal()
 	require.NoError(t, err)
 
 	m2, err := FromProtobuf(data)
@@ -493,7 +494,7 @@ func TestAddPointerToStruct(t *testing.T) {
 	err := m.Add("things", &simpleThing{Name: "test", Age: 18})
 	require.NoError(t, err)
 
-	data, err := ToProtobuf(m)
+	data, err := m.Marshal()
 	require.NoError(t, err)
 
 	m2, err := FromProtobuf(data)
@@ -508,4 +509,15 @@ func TestAddPointerToStruct(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, age, 18)
+}
+
+func FromProtobuf(buf []byte) (*Message, error) {
+	m := &Message{}
+
+	err := proto.Unmarshal(buf, m)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }

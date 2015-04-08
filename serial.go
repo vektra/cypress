@@ -2,6 +2,7 @@ package cypress
 
 import "sync"
 
+// A type that wraps a Receiver in a mutex
 type SerialReceiver struct {
 	Receiver Receiver
 	lock     sync.Mutex

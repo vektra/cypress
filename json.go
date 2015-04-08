@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"io"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/vektra/tai64n"
 )
 
+// Generate JSON for a Message
 func (m *Message) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.SimpleJSONMap())
 }
 
+// Populate a Message from JSON in data
 func (m *Message) UnmarshalJSON(data []byte) error {
 	m2, err := ParseSimpleJSON(data)
 	if err != nil {
@@ -26,6 +27,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	return err
 }
 
+// Generate a Message from json in data
 func ParseSimpleJSON(data []byte) (*Message, error) {
 	m := &Message{Version: DEFAULT_VERSION}
 
@@ -141,6 +143,8 @@ func ParseSimpleJSON(data []byte) (*Message, error) {
 	return m, nil
 }
 
+// Return a simple map representing the Message used to generate
+// JSON
 func (m *Message) SimpleJSONMap() map[string]interface{} {
 	p := map[string]interface{}{
 		"@timestamp": m.Timestamp.Time().Format(time.RFC3339Nano),
@@ -195,28 +199,4 @@ func (m *Message) SimpleJSONMap() map[string]interface{} {
 	}
 
 	return p
-}
-
-type JsonStream struct {
-	Src io.Reader
-	Out Receiver
-}
-
-func (js *JsonStream) Parse() error {
-	dec := json.NewDecoder(js.Src)
-
-	for {
-		m := &Message{}
-
-		err := dec.Decode(m)
-		if err != nil {
-			return err
-		}
-
-		m.Version = DEFAULT_VERSION
-
-		js.Out.Receive(m)
-	}
-
-	return nil
 }

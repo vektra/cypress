@@ -2,6 +2,7 @@ package cypress
 
 import "io"
 
+// A type which uses Probe and Decoder generate Messages
 type StreamDecoder struct {
 	r    io.Reader
 	init bool
@@ -10,10 +11,12 @@ type StreamDecoder struct {
 	Header *StreamHeader
 }
 
+// Create a new StreamDecoder from the data in r
 func NewStreamDecoder(r io.Reader) (*StreamDecoder, error) {
 	return &StreamDecoder{r: r, dec: NewDecoder(r)}, nil
 }
 
+// Probe the stream and setup the decoder to read Messages
 func (s *StreamDecoder) Probe() error {
 	s.init = true
 
@@ -31,6 +34,8 @@ func (s *StreamDecoder) Probe() error {
 	return nil
 }
 
+// Read the next Message in the stream. If the stream has not
+// been initialized, Probe() is called first.
 func (s *StreamDecoder) Generate() (*Message, error) {
 	if !s.init {
 		err := s.Probe()
@@ -42,6 +47,7 @@ func (s *StreamDecoder) Generate() (*Message, error) {
 	return s.dec.Decode()
 }
 
+// To satisify the Generator interface
 func (s *StreamDecoder) Close() error {
 	return nil
 }

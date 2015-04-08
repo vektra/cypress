@@ -6,6 +6,8 @@ import (
 	"os/exec"
 )
 
+// A type which runs a command and generates messages from the commands
+// standard output.
 type Run struct {
 	request string
 	cmd     *exec.Cmd
@@ -13,6 +15,7 @@ type Run struct {
 	buf     *bufio.Reader
 }
 
+// Create a new Run for the given program with arguments.
 func NewRun(prog string, args ...string) (*Run, error) {
 	c := exec.Command(prog, args...)
 
@@ -31,6 +34,7 @@ func NewRun(prog string, args ...string) (*Run, error) {
 	return &Run{request: prog, cmd: c, stdout: stdout, buf: buf}, nil
 }
 
+// Generate a Message from the programs next output line.
 func (r *Run) Generate() (*Message, error) {
 	str, err := r.buf.ReadString('\n')
 	if err != nil {
@@ -44,6 +48,7 @@ func (r *Run) Generate() (*Message, error) {
 	return m, nil
 }
 
+// Close the output from the program and wait for it to finish.
 func (r *Run) Close() error {
 	r.stdout.Close()
 	return r.cmd.Wait()

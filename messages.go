@@ -1,5 +1,6 @@
 package cypress
 
+// A slices of Messages that can be used to order messages by Timestamp
 type Messages []*Message
 
 func (m Messages) Len() int      { return len(m) }

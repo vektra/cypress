@@ -57,7 +57,8 @@ func TestLocal(t *testing.T) {
 
 		defer conn.Close()
 
-		cypress.WriteLocalMessage(conn, m)
+		enc := cypress.NewEncoder(conn)
+		enc.Encode(m)
 
 		time.Sleep(1 * time.Second)
 

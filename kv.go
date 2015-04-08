@@ -2,7 +2,6 @@ package cypress
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -13,28 +12,20 @@ import (
 	"github.com/vektra/tai64n"
 )
 
-var EParseError = errors.New("Unable to parse line")
-
 const whitespace = 1<<'\t' | 1<<' '
 const tokens = scanner.ScanIdents | scanner.ScanFloats | scanner.ScanStrings
 
 var cToNano = []int64{100000000, 10000000, 1000000, 100000, 10000, 1000,
 	100, 10, 1}
 
+// Given a reader, parse it as KV lines and send the message to r
 func ParseKVStream(in io.Reader, r Receiver) error {
 	parser := NewKVParser(in)
 
 	return Glue(parser, r)
 }
 
-type MessageBuffer struct {
-	Messages []*Message
-}
-
-func (b *MessageBuffer) Receive(m *Message) (err error) {
-	b.Messages = append(b.Messages, m)
-	return nil
-}
+// Parse the given line in KV format into a Message
 func ParseKV(line string) (*Message, error) {
 	buf := bytes.NewReader([]byte(line))
 
@@ -43,6 +34,7 @@ func ParseKV(line string) (*Message, error) {
 	return parser.Generate()
 }
 
+// A type which can transform a io.Reader into a set of Messages
 type KVParser struct {
 	Bare bool
 
@@ -110,6 +102,7 @@ func (kv *KVParser) skipToNewline() {
 	}
 }
 
+// Create a new KVParser from the data in r
 func NewKVParser(r io.Reader) *KVParser {
 	kv := &KVParser{r: r}
 
@@ -120,6 +113,7 @@ func NewKVParser(r io.Reader) *KVParser {
 	return kv
 }
 
+// Read and decode and return another Message
 func (s *KVParser) Generate() (*Message, error) {
 	scan := &s.scan
 
@@ -398,6 +392,7 @@ restart:
 	return nil, io.EOF
 }
 
+// To fit the Generator interface
 func (p *KVParser) Close() error {
 	return nil
 }

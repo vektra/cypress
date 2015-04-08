@@ -2,6 +2,7 @@ package cypress
 
 import "os"
 
+// Indicate if the cypress agent is available
 func Available() bool {
 	_, err := os.Stat(LogPath())
 	return err == nil
@@ -23,14 +24,17 @@ func init() {
 	system = &nullLogger{}
 }
 
+// Open a connection to the system logger
 func Open() {
 	system = Connect()
 }
 
+// Write a Message to the system logger
 func Write(m *Message) error {
 	return system.Write(m)
 }
 
+// Close the system logger
 func Close() error {
 	return system.Close()
 }

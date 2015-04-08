@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// A type use to send a stream of Messages reliably. This type works in
+// coordination with Recv to make transport the stream reliably by
+// buffering and acking messages.
 type Send struct {
 	OnClosed func()
 
@@ -69,6 +72,14 @@ var (
 	SlowInternetWindow = MinimumSendWindow(50*time.Millisecond, DefaultMPSRate)
 )
 
+// Create a new Send, reading and writing from rw. Window controls
+// the size of the ack window to use. See MinimumSendWindow and the Window
+// variables for information window sizes. If the window is set to 0, the
+// default window size is used.
+// NOTE: The window size has a big effect on the throughput of Send, so
+// be sure to consider it's value. The larger the window, the higher
+// the memory usage and throughput. Fast lans only require a small window
+// because there is a very small transmission delay.
 func NewSend(rw io.ReadWriter, window int) *Send {
 	switch window {
 	case -1:
@@ -93,6 +104,8 @@ func NewSend(rw io.ReadWriter, window int) *Send {
 	return s
 }
 
+// Send the start of a stream to the remote side. This will initialize
+// the stream to use Snappy for compression and reliable transmission.
 func (s *Send) SendHandshake() error {
 	hdr := &StreamHeader{
 		Compression: SNAPPY.Enum(),
@@ -102,6 +115,8 @@ func (s *Send) SendHandshake() error {
 	return s.enc.WriteCustomHeader(hdr)
 }
 
+// Send the Message. If there is an error, nack the message so it can
+// be sent again later.
 func (s *Send) transmit(m *Message) error {
 	err := s.enc.Receive(m)
 	if err != nil {
@@ -112,13 +127,18 @@ func (s *Send) transmit(m *Message) error {
 	return nil
 }
 
+// Indicates that both sides of the stream have gotten confused and are
+// no longer is sync.
 var ErrStreamUnsynced = errors.New("stream unsynced")
 
+// Used to track all messages that are currently not ack'd by the remote
+// side.
 type sendInFlight struct {
 	req SendRequest
 	m   *Message
 }
 
+// Read any acks from the stream and remove them from the requests list.
 func (s *Send) readAck() error {
 	n, err := s.rw.Read(s.buf)
 	if err != nil {
@@ -153,6 +173,8 @@ func (s *Send) readAck() error {
 	return nil
 }
 
+// Tell the sender about all the messages that it was not able to get
+// acks about and thus should be resent.
 func (s *Send) sendNacks() {
 	if s.closed {
 		return
@@ -175,6 +197,8 @@ func (s *Send) sendNacks() {
 	s.ackCond.Signal()
 }
 
+// Read acks forever and if there is an error reading acks, nack all
+// inflight requests.
 func (s *Send) backgroundAck() {
 	for {
 		err := s.readAck()
@@ -188,12 +212,17 @@ func (s *Send) backgroundAck() {
 	}
 }
 
+// Send a Message to the remote side
 func (s *Send) Receive(m *Message) error {
 	return s.Send(m, nil)
 }
 
+// Indicate that this Send is closed and can not be used
 var ErrClosed = errors.New("send closed")
 
+// Send a Message to the remote side. if req is not nil, then
+// it will be updated as to the status of m, calling either
+// Ack or Nack depending on if things go ok or not.
 func (s *Send) Send(m *Message, req SendRequest) error {
 	s.ackLock.Lock()
 	defer s.ackLock.Unlock()

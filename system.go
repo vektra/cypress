@@ -2,19 +2,20 @@ package cypress
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
 	"time"
 )
 
+// The path on this system that the agent listens
 const DefaultSocketPath = "/var/lib/cypress.sock"
 
 var cMaxBuffer = 100
 
 const cDefaultBacklog = 100
 
+// A simple interface used to represent a system logger
 type Logger interface {
 	Write(m *Message) error
 	Close() error
@@ -28,8 +29,10 @@ type localConn struct {
 	shutdown  chan struct{}
 	done      chan struct{}
 	buffer    []*Message
+	enc       *Encoder
 }
 
+// Connect to an agent on a path and return a Logger
 func ConnectTo(path string) Logger {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -57,6 +60,7 @@ func ConnectTo(path string) Logger {
 	return l
 }
 
+// Connect to the default system logger
 func Connect() Logger {
 	return ConnectTo(LogPath())
 }
@@ -70,6 +74,7 @@ func LogPath() string {
 	return DefaultSocketPath
 }
 
+// Buffer m until the logger returns
 func (l *localConn) save(m *Message) {
 	if len(l.buffer) >= cMaxBuffer {
 		l.buffer = append([]*Message{m}, l.buffer[:cMaxBuffer-1]...)
@@ -78,19 +83,13 @@ func (l *localConn) save(m *Message) {
 	}
 }
 
-var cPlus = []byte("+")
-
-func WriteLocalMessage(w io.Writer, m *Message) error {
-	enc := NewEncoder(w)
-
-	_, err := enc.Encode(m)
+// Send Message to the logger
+func (l *localConn) send(m *Message) error {
+	_, err := l.enc.Encode(m)
 	return err
 }
 
-func (l *localConn) send(m *Message) error {
-	return WriteLocalMessage(l.conn, m)
-}
-
+// Write out any buffered messages to the logger
 func (l *localConn) flush() {
 	if !l.connected {
 		conn, err := net.Dial("unix", l.path)
@@ -101,6 +100,7 @@ func (l *localConn) flush() {
 
 		l.conn = conn
 		l.connected = true
+		l.enc = NewEncoder(conn)
 	}
 
 	for len(l.buffer) > 0 {
@@ -119,6 +119,7 @@ func (l *localConn) flush() {
 
 const cMaxTries = 10
 
+// Write out any buffered messages to the logger before exitting
 func (l *localConn) finalFlush() {
 	tries := 0
 
@@ -139,6 +140,7 @@ start:
 
 		l.conn = conn
 		l.connected = true
+		l.enc = NewEncoder(conn)
 	}
 
 	for len(l.buffer) > 0 {
@@ -157,6 +159,8 @@ start:
 	}
 }
 
+// Work loop of the local connection. Reads messages, sends them to the
+// logger, flushes the buffers, etc.
 func (l *localConn) process() {
 	tick := time.NewTicker(1 * time.Second)
 
@@ -194,6 +198,7 @@ func (l *localConn) process() {
 	} // for(ever)
 }
 
+// Close the background proces goroutine
 func (l *localConn) Close() error {
 	l.shutdown <- struct{}{}
 	<-l.done
@@ -201,6 +206,7 @@ func (l *localConn) Close() error {
 	return nil
 }
 
+// Write the Message to the Logger
 func (l *localConn) Write(m *Message) error {
 	l.feeder <- m
 	return nil

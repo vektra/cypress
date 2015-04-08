@@ -6,8 +6,13 @@ import (
 	"io"
 )
 
+// Indicate that the varint is invalid
 var ErrOverflow = errors.New("overflow parsing varint")
 
+// Read a unsigned varint from the reader using buf as scratch.
+// This reads data from r one byte at a time, making it a little
+// slower if r is a net.Conn, but it keeps r positioned correctly
+// as opposed to using a buffered reader.
 func ReadUvarint(r io.Reader, buf []byte) (uint64, error) {
 	var x uint64
 	var s uint
@@ -37,6 +42,7 @@ func ReadUvarint(r io.Reader, buf []byte) (uint64, error) {
 	}
 }
 
+// Write a uint64 value to w in unsigned varint format.
 func WriteUvarint(w io.Writer, x uint64) (int, error) {
 	var buf [10]byte
 

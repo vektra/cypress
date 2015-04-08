@@ -11,12 +11,14 @@ type MessageEncoder interface {
 	Encode(m *Message) (uint64, error)
 }
 
+// A type that encodes Messages to a stream with optional compression
 type StreamEncoder struct {
 	w       io.Writer
 	enc     MessageEncoder
 	encoded uint64
 }
 
+// Create a new StreamEncoder sending data to w
 func NewStreamEncoder(w io.Writer) *StreamEncoder {
 	if w == os.Stdout {
 		if termutil.Isatty(os.Stdout.Fd()) {
@@ -29,12 +31,15 @@ func NewStreamEncoder(w io.Writer) *StreamEncoder {
 
 var StreamNotifyByte = []byte{'-'}
 
-func (s *StreamEncoder) WriteHeader(comp StreamHeader_Compression) error {
+// Initialize the StreamEncoder to a particular compression level and
+// write the header
+func (s *StreamEncoder) Init(comp StreamHeader_Compression) error {
 	hdr := &StreamHeader{Compression: comp.Enum()}
 
 	return s.WriteCustomHeader(hdr)
 }
 
+// Write a StreamHeader
 func (s *StreamEncoder) WriteCustomHeader(hdr *StreamHeader) error {
 	_, err := s.w.Write(StreamNotifyByte)
 	if err != nil {
@@ -61,10 +66,8 @@ func (s *StreamEncoder) WriteCustomHeader(hdr *StreamHeader) error {
 	return nil
 }
 
-func (s *StreamEncoder) Init(comp StreamHeader_Compression) error {
-	return s.WriteHeader(comp)
-}
-
+// Probe the file and setup the encoder to match the probe's
+// settings.
 func (s *StreamEncoder) OpenFile(f *os.File) error {
 	probe := NewProbe(f)
 
@@ -79,6 +82,7 @@ func (s *StreamEncoder) OpenFile(f *os.File) error {
 	return err
 }
 
+// Take a Message and encode it
 func (s *StreamEncoder) Receive(m *Message) error {
 	cnt, err := s.enc.Encode(m)
 
@@ -87,6 +91,7 @@ func (s *StreamEncoder) Receive(m *Message) error {
 	return err
 }
 
+// Indicate how many bytes have been sent
 func (s *StreamEncoder) EncodedBytes() uint64 {
 	return s.encoded
 }
