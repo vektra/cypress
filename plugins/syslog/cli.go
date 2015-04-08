@@ -47,6 +47,10 @@ func (s *CLI) Execute(args []string) error {
 		return fmt.Errorf("specify only one method")
 	case s.Dgram != "":
 		conn, err = NewSyslogDgram(s.Dgram, r)
+		if err != nil {
+			return err
+		}
+
 	case s.TCP != "":
 		l, err := net.Listen("tcp", s.TCP)
 		if err != nil {
@@ -54,6 +58,9 @@ func (s *CLI) Execute(args []string) error {
 		}
 
 		conn, err = NewSyslogFromListener(l, r)
+		if err != nil {
+			return err
+		}
 
 		conn.OctetCounted = s.OctetCounted
 	case s.UDP != "":
@@ -68,6 +75,9 @@ func (s *CLI) Execute(args []string) error {
 		}
 
 		conn, err = NewSyslogFromConn(c, r)
+		if err != nil {
+			return err
+		}
 	}
 
 	return conn.Run()
