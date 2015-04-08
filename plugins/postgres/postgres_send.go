@@ -35,6 +35,7 @@ INSERT INTO cypress_messages (
 type DBInterface interface {
 	Ping() error
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
 type ResultInterface interface {
