@@ -65,6 +65,8 @@ func Connect() Logger {
 	return ConnectTo(LogPath())
 }
 
+// Return the default log path. The environment variable LOG_PATH is used
+// if set, otherwise DefaultSocketPath.
 func LogPath() string {
 	path := os.Getenv("LOG_PATH")
 	if path != "" {

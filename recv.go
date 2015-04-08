@@ -24,10 +24,10 @@ func (r *Recv) recvMessage() (*Message, error) {
 	return r.dec.Generate()
 }
 
-var ReliableAckBytes = []byte{'k'}
+var reliableAckBytes = []byte{'k'}
 
 func (r *Recv) sendAck() error {
-	_, err := r.rw.Write(ReliableAckBytes)
+	_, err := r.rw.Write(reliableAckBytes)
 	return err
 }
 
