@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
+	"io"
 	"net"
 	"strconv"
 	"strings"
@@ -15,6 +15,9 @@ import (
 )
 
 type Syslog struct {
+	// Use RFC6587 encoded messages
+	OctetCounted bool
+
 	r cypress.Receiver
 
 	c net.Conn
@@ -73,6 +76,22 @@ func NewSyslogDgram(path string, r cypress.Receiver) (*Syslog, error) {
 	return NewSyslogFromConn(c, r)
 }
 
+func NewSyslogTCP(addr string, r cypress.Receiver) (*Syslog, error) {
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := NewSyslogFromListener(l, r)
+	if err != nil {
+		return nil, err
+	}
+
+	s.OctetCounted = true
+
+	return s, err
+}
+
 func NewSyslogFromListener(l net.Listener, r cypress.Receiver) (*Syslog, error) {
 	return &Syslog{r: r, l: l}, nil
 }
@@ -81,11 +100,25 @@ func NewSyslogFromConn(c net.Conn, r cypress.Receiver) (*Syslog, error) {
 	return &Syslog{r: r, c: c}, nil
 }
 
-func (s *Syslog) runConn(c net.Conn) error {
+func (s *Syslog) runConn(c io.Reader) error {
 	input := bufio.NewReader(c)
 
 	for {
-		m, err := parseSyslog(input)
+		sz := -1
+
+		if s.OctetCounted {
+			szStr, err := input.ReadString(' ')
+			if err != nil {
+				return err
+			}
+
+			sz, err = strconv.Atoi(szStr[:len(szStr)-1])
+			if err != nil {
+				return err
+			}
+		}
+
+		m, err := parseSyslog(input, sz)
 		if err != nil {
 			return err
 		}
@@ -124,7 +157,7 @@ func (s *Syslog) Stop() error {
 
 var ErrInvalidFormat = errors.New("invalid format")
 
-func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
+func parseSyslog(buf *bufio.Reader, total int) (*cypress.Message, error) {
 	c, err := buf.ReadByte()
 	if err != nil {
 		return nil, err
@@ -134,10 +167,14 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 		return nil, ErrInvalidFormat
 	}
 
+	total--
+
 	nxt, err := buf.ReadString('>')
 	if err != nil {
 		return nil, err
 	}
+
+	total -= len(nxt)
 
 	prio, err := strconv.Atoi(nxt[:len(nxt)-1])
 	if err != nil {
@@ -152,7 +189,9 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 	if peek[0] == '1' && peek[1] == ' ' {
 		buf.ReadByte()
 		buf.ReadByte()
-		return parse5425(prio, buf)
+
+		total -= 2
+		return parse5425(prio, buf, total)
 	}
 
 	tsFmts := []string{
@@ -182,7 +221,9 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 		ts, err = time.Parse(tsFmt, string(sub))
 		if err == nil {
 			found = true
-			buf.Read(sub)
+			n, _ := buf.Read(sub)
+
+			total -= n
 			break
 		}
 	}
@@ -200,10 +241,14 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 		return nil, ErrInvalidFormat
 	}
 
+	total--
+
 	host, err := buf.ReadString(' ')
 	if err != nil {
 		return nil, err
 	}
+
+	total -= len(host)
 
 	host = host[:len(host)-1]
 
@@ -211,6 +256,8 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	total -= len(tag)
 
 	tag = tag[:len(tag)-1]
 
@@ -225,9 +272,21 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 		}
 	}
 
-	msg, err := buf.ReadString('\n')
-	if err != nil {
-		return nil, err
+	var msg string
+
+	if total > 0 {
+		msgBuf := make([]byte, total)
+		_, err = buf.Read(msgBuf)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = string(msgBuf)
+	} else {
+		msg, err = buf.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	typ := uint32(cypress.LOG)
@@ -264,7 +323,7 @@ func parseSyslog(buf *bufio.Reader) (*cypress.Message, error) {
 
 // <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - 'su root' failed for lonvick on /dev/pts/8\n
 
-func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
+func parse5425(prio int, buf *bufio.Reader, total int) (*cypress.Message, error) {
 	tsFmts := []string{
 		"Jan 02 15:04:05",
 		"Jan  2 15:04:05",
@@ -289,17 +348,14 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 			}
 		}
 
-		fmt.Printf("sub: %s\n", string(sub))
-
 		ts, err = time.Parse(tsFmt, string(sub))
 		if err == nil {
 			found = true
-			buf.Read(sub)
+			n, _ := buf.Read(sub)
+			total -= n
 			break
 		}
 	}
-
-	fmt.Println("here 1")
 
 	if !found {
 		return nil, ErrInvalidFormat
@@ -314,10 +370,14 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 		return nil, ErrInvalidFormat
 	}
 
+	total--
+
 	host, err := buf.ReadString(' ')
 	if err != nil {
 		return nil, err
 	}
+
+	total -= len(host)
 
 	host = host[:len(host)-1]
 
@@ -326,6 +386,8 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 		return nil, err
 	}
 
+	total -= len(tag)
+
 	tag = tag[:len(tag)-1]
 
 	procid, err := buf.ReadString(' ')
@@ -333,12 +395,16 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 		return nil, err
 	}
 
+	total -= len(procid)
+
 	procid = procid[:len(procid)-1]
 
 	msgid, err := buf.ReadString(' ')
 	if err != nil {
 		return nil, err
 	}
+
+	total -= len(msgid)
 
 	msgid = msgid[:len(msgid)-1]
 
@@ -365,20 +431,21 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 		if c != ' ' {
 			return nil, ErrInvalidFormat
 		}
+
+		total -= 2
 	} else {
 		var valbuf bytes.Buffer
 
 	outer:
 		for {
-			fmt.Printf("TOP\n")
 			sdid, err := buf.ReadString(' ')
 			if err != nil {
 				return nil, err
 			}
 
-			sdid = sdid[1 : len(sdid)-1]
+			total -= len(sdid)
 
-			fmt.Printf("sdid: %s\n", sdid)
+			sdid = sdid[1 : len(sdid)-1]
 
 			for {
 				peek, err := buf.Peek(1)
@@ -388,11 +455,13 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 
 				if peek[0] == ']' {
 					buf.ReadByte()
+					total--
 					break outer
 				}
 
 				if peek[0] == ' ' {
 					buf.ReadByte()
+					total--
 				}
 
 				name, err := buf.ReadString('=')
@@ -400,14 +469,16 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 					return nil, err
 				}
 
-				name = name[:len(name)-1]
+				total -= len(name)
 
-				fmt.Printf("  name: %s\n", name)
+				name = name[:len(name)-1]
 
 				q, err := buf.ReadByte()
 				if err != nil {
 					return nil, err
 				}
+
+				total--
 
 				if q != '"' {
 					return nil, ErrInvalidFormat
@@ -421,6 +492,8 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 						return nil, err
 					}
 
+					total--
+
 					if c == '"' {
 						break
 					}
@@ -431,6 +504,8 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 							return nil, err
 						}
 
+						total--
+
 						valbuf.WriteByte(c)
 					} else {
 						valbuf.WriteByte(c)
@@ -439,16 +514,27 @@ func parse5425(prio int, buf *bufio.Reader) (*cypress.Message, error) {
 
 				val := valbuf.String()
 
-				fmt.Printf("  val: %s\n", val)
-
 				m.AddString(sdid+"."+name, val)
 			}
 		}
 	}
 
-	msg, err := buf.ReadString('\n')
-	if err != nil {
-		return nil, err
+	var msg string
+
+	if total > 0 {
+		msgBuf := make([]byte, total)
+
+		_, err = buf.Read(msgBuf)
+		if err != nil {
+			return nil, err
+		}
+
+		msg = string(msgBuf)
+	} else {
+		msg, err = buf.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	m.AddTag("host", host)

@@ -13,6 +13,8 @@ type CLI struct {
 	Dgram string `long:"dgram" description:"Listen for unix diagrams at a path"`
 	TCP   string `short:"t" long:"tcp" description:"Listen on a TCP port"`
 	UDP   string `short:"u" long:"udp" description:"Listen on a UDP port"`
+
+	OctetCounted bool `short:"c" long:"octet-counted" default:"true" description:"For TCP, use RFC6587 encoded messages"`
 }
 
 func (s *CLI) Execute(args []string) error {
@@ -52,6 +54,8 @@ func (s *CLI) Execute(args []string) error {
 		}
 
 		conn, err = NewSyslogFromListener(l, r)
+
+		conn.OctetCounted = s.OctetCounted
 	case s.UDP != "":
 		addr, err := net.ResolveUDPAddr("udp", s.UDP)
 		if err != nil {

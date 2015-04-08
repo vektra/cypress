@@ -2,7 +2,9 @@ package syslog
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log/syslog"
 	"net"
@@ -33,7 +35,7 @@ func TestSyslog(t *testing.T) {
 
 		buf := bufio.NewReader(strings.NewReader(line))
 
-		m, err := parseSyslog(buf)
+		m, err := parseSyslog(buf, -1)
 		require.NoError(t, err)
 
 		serv, ok := m.GetString("severity")
@@ -76,7 +78,7 @@ func TestSyslog(t *testing.T) {
 
 		buf := bufio.NewReader(strings.NewReader(line))
 
-		_, err := parseSyslog(buf)
+		_, err := parseSyslog(buf, -1)
 		require.NoError(t, err)
 	})
 
@@ -177,7 +179,7 @@ func TestSyslog(t *testing.T) {
 
 		buf := bufio.NewReader(strings.NewReader(line))
 
-		m, err := parseSyslog(buf)
+		m, err := parseSyslog(buf, -1)
 		require.NoError(t, err)
 
 		serv, ok := m.GetString("severity")
@@ -215,7 +217,7 @@ func TestSyslog(t *testing.T) {
 
 		buf := bufio.NewReader(strings.NewReader(line))
 
-		m, err := parseSyslog(buf)
+		m, err := parseSyslog(buf, -1)
 		require.NoError(t, err)
 
 		serv, ok := m.GetString("severity")
@@ -259,7 +261,7 @@ func TestSyslog(t *testing.T) {
 
 		buf := bufio.NewReader(strings.NewReader(line))
 
-		m, err := parseSyslog(buf)
+		m, err := parseSyslog(buf, -1)
 		require.NoError(t, err)
 
 		serv, ok := m.GetString("severity")
@@ -291,8 +293,6 @@ func TestSyslog(t *testing.T) {
 
 		assert.Equal(t, "ID47", msgid)
 
-		fmt.Printf("msg: %s\n", m.KVString())
-
 		iut, ok := m.GetString("exampleSDID@32473.iut")
 		require.True(t, ok)
 
@@ -312,6 +312,56 @@ func TestSyslog(t *testing.T) {
 		require.True(t, ok)
 
 		assert.Equal(t, "An application event log entry...", msg)
+	})
+
+	n.It("can read octet-counted messages", func() {
+		var buf bytes.Buffer
+
+		emit := func(l string) {
+			buf.WriteString(fmt.Sprintf("%d ", len(l)))
+			buf.WriteString(l)
+		}
+
+		emit("<14>2015-03-16T12:10:52-07:00 zero.local test[64480]: this is from golang tests\n")
+		emit("<14>2015-03-16T12:10:52-07:00 zero.local test[64481]: this is a second message\n")
+		emit(`<165>1 2003-10-11T22:14:15.003Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] ` +
+			"\xEF\xBB\xBFAn application event log entry...\n")
+
+		var recv cypress.BufferReceiver
+
+		s := &Syslog{r: &recv, OctetCounted: true}
+
+		err := s.runConn(&buf)
+		require.Equal(t, err, io.EOF)
+
+		m1 := recv.Messages[0]
+		m2 := recv.Messages[1]
+		m3 := recv.Messages[2]
+
+		pid1, ok := m1.GetInt("pid")
+		require.True(t, ok)
+
+		assert.Equal(t, 64480, pid1)
+
+		msg1, ok := m1.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "this is from golang tests", msg1)
+
+		pid2, ok := m2.GetInt("pid")
+		require.True(t, ok)
+
+		assert.Equal(t, 64481, pid2)
+
+		msg2, ok := m2.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "this is a second message", msg2)
+
+		msg3, ok := m3.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "An application event log entry...", msg3)
 	})
 
 	n.Meow()
