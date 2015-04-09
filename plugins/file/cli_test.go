@@ -103,6 +103,15 @@ func TestCLI(t *testing.T) {
 
 		cli = &CLI{Once: true, DB: dbpath, output: &buf}
 
+		db, err := NewOffsetDB(dbpath)
+		require.NoError(t, err)
+
+		entry, err := db.Get(file)
+		require.NoError(t, err)
+
+		require.True(t, entry.Valid())
+		require.True(t, entry.Offset > 0)
+
 		err = cli.Execute([]string{file})
 		require.NoError(t, err)
 
