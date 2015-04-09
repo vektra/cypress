@@ -19,6 +19,10 @@ type Plugin interface {
 	Generator() (Generator, error)
 }
 
+type FiltererPlugin interface {
+	Filterer() (Filterer, error)
+}
+
 var plugins = map[string]func() Plugin{}
 
 // Add a new plugin by name with a function to create a new instance
@@ -40,7 +44,8 @@ func FindPlugin(name string) (Plugin, bool) {
 
 // Used for testing only
 type TestPlugin struct {
-	Messages chan *Message
+	Messages     chan *Message
+	FilterFields map[string]interface{}
 }
 
 func (t *TestPlugin) Init() {
@@ -51,21 +56,33 @@ func (t *TestPlugin) Generator() (Generator, error) {
 	return t, nil
 }
 
-func (t *TestPlugin) Receiver() (Receiver, error) {
-	return t, nil
-}
-
 func (t *TestPlugin) Generate() (*Message, error) {
 	return <-t.Messages, nil
 }
 
-func (t *TestPlugin) Close() error {
-	close(t.Messages)
-	return nil
+func (t *TestPlugin) Receiver() (Receiver, error) {
+	return t, nil
 }
 
 func (t *TestPlugin) Receive(m *Message) error {
 	t.Messages <- m
+	return nil
+}
+
+func (t *TestPlugin) Filterer() (Filterer, error) {
+	return t, nil
+}
+
+func (t *TestPlugin) Filter(m *Message) (*Message, error) {
+	for k, v := range t.FilterFields {
+		m.Add(k, v)
+	}
+
+	return m, nil
+}
+
+func (t *TestPlugin) Close() error {
+	close(t.Messages)
 	return nil
 }
 

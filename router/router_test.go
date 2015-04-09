@@ -157,5 +157,57 @@ output = ["output"]
 		}
 	})
 
+	n.It("wires up filters in the routes", func() {
+		testToml := `
+[input.Test]
+
+[output.Test]
+
+[filt.Test]
+
+[route.Default]
+generate = ["input"]
+filter = ["filt"]
+output = ["output"]
+`
+
+		r := NewRouter()
+		err := r.LoadConfig(strings.NewReader(testToml))
+		require.NoError(t, err)
+
+		err = r.Open()
+		require.NoError(t, err)
+
+		defer r.Close()
+
+		r1, ok := r.routes["Default"]
+		require.True(t, ok)
+
+		filt := r1.filters[0].(*cypress.TestPlugin)
+
+		filt.FilterFields = map[string]interface{}{
+			"host": "filters.rock",
+		}
+
+		in := r1.generators[0].(*cypress.TestPlugin)
+
+		m := cypress.Log()
+		m.Add("hello", "world")
+
+		in.Messages <- m
+
+		out := r1.receivers[0].(*cypress.TestPlugin)
+
+		select {
+		case m2 := <-out.Messages:
+			host, ok := m2.GetString("host")
+			require.True(t, ok)
+
+			assert.Equal(t, "filters.rock", host)
+		case <-time.Tick(1 * time.Second):
+			t.Fatal("message did not flow through the router")
+		}
+	})
+
 	n.Meow()
 }

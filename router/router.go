@@ -22,9 +22,11 @@ type Route struct {
 	Enabled  bool
 	Generate []string
 	Output   []string
+	Filter   []string
 
 	generators []cypress.Generator
 	receivers  []cypress.Receiver
+	filters    []cypress.Filterer
 }
 
 type Router struct {
@@ -112,6 +114,7 @@ var (
 	ErrUnknownPlugin    = errors.New("unknown plugin")
 	ErrInvalidGenerator = errors.New("invalid/nil generator")
 	ErrInvalidReceiver  = errors.New("invalid/nil receiver")
+	ErrInvalidFilterer  = errors.New("invalid/nil filterer")
 )
 
 func (r *Router) Open() error {
@@ -180,6 +183,29 @@ func (r *Router) wireRoutes() error {
 			route.generators = append(route.generators, gen)
 		}
 
+		for _, name := range route.Filter {
+			def, ok := r.plugins[name]
+			if !ok {
+				return errors.Subject(ErrUnknownPlugin, name)
+			}
+
+			fp, ok := def.Plugin.(cypress.FiltererPlugin)
+			if !ok {
+				return errors.Subject(ErrInvalidFilterer, name)
+			}
+
+			filt, err := fp.Filterer()
+			if err != nil {
+				return errors.Subject(err, name)
+			}
+
+			if filt == nil {
+				return errors.Subject(ErrInvalidFilterer, name)
+			}
+
+			route.filters = append(route.filters, filt)
+		}
+
 		for _, name := range route.Output {
 			def, ok := r.plugins[name]
 			if !ok {
@@ -220,6 +246,23 @@ func (r *Route) Flow() {
 	}
 
 	for msg := range c {
+		for _, filt := range r.filters {
+			msg, err := filt.Filter(msg)
+			if err != nil {
+				log.Printf("Error filtering message: %s", err)
+				msg = nil
+				break
+			}
+
+			if msg == nil {
+				break
+			}
+		}
+
+		if msg == nil {
+			continue
+		}
+
 		for _, recv := range r.receivers {
 			err := recv.Receive(msg)
 			if err != nil {
