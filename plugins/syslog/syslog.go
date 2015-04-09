@@ -18,8 +18,6 @@ type Syslog struct {
 	// Use RFC6587 encoded messages
 	OctetCounted bool
 
-	r cypress.Receiver
-
 	c net.Conn
 	l net.Listener
 }
@@ -62,7 +60,7 @@ var severity = []string{
 	"debug",
 }
 
-func NewSyslogDgram(path string, r cypress.Receiver) (*Syslog, error) {
+func NewSyslogDgram(path string) (*Syslog, error) {
 	unixAddr, err := net.ResolveUnixAddr("unixgram", path)
 	if err != nil {
 		return nil, err
@@ -73,16 +71,16 @@ func NewSyslogDgram(path string, r cypress.Receiver) (*Syslog, error) {
 		return nil, err
 	}
 
-	return NewSyslogFromConn(c, r)
+	return NewSyslogFromConn(c)
 }
 
-func NewSyslogTCP(addr string, r cypress.Receiver) (*Syslog, error) {
+func NewSyslogTCP(addr string) (*Syslog, error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
-	s, err := NewSyslogFromListener(l, r)
+	s, err := NewSyslogFromListener(l)
 	if err != nil {
 		return nil, err
 	}
@@ -92,15 +90,15 @@ func NewSyslogTCP(addr string, r cypress.Receiver) (*Syslog, error) {
 	return s, err
 }
 
-func NewSyslogFromListener(l net.Listener, r cypress.Receiver) (*Syslog, error) {
-	return &Syslog{r: r, l: l}, nil
+func NewSyslogFromListener(l net.Listener) (*Syslog, error) {
+	return &Syslog{l: l}, nil
 }
 
-func NewSyslogFromConn(c net.Conn, r cypress.Receiver) (*Syslog, error) {
-	return &Syslog{r: r, c: c}, nil
+func NewSyslogFromConn(c net.Conn) (*Syslog, error) {
+	return &Syslog{c: c}, nil
 }
 
-func (s *Syslog) runConn(c io.Reader) error {
+func (s *Syslog) runConn(c io.Reader, r cypress.Receiver) error {
 	input := bufio.NewReader(c)
 
 	for {
@@ -123,7 +121,7 @@ func (s *Syslog) runConn(c io.Reader) error {
 			return err
 		}
 
-		err = s.r.Receive(m)
+		err = r.Receive(m)
 		if err != nil {
 			return err
 		}
@@ -132,9 +130,9 @@ func (s *Syslog) runConn(c io.Reader) error {
 	return nil
 }
 
-func (s *Syslog) Run() error {
+func (s *Syslog) Run(r cypress.Receiver) error {
 	if s.c != nil {
-		return s.runConn(s.c)
+		return s.runConn(s.c, r)
 	}
 
 	for {
@@ -143,7 +141,7 @@ func (s *Syslog) Run() error {
 			return err
 		}
 
-		go s.runConn(c)
+		go s.runConn(c, r)
 	}
 }
 

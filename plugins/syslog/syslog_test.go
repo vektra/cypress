@@ -86,7 +86,7 @@ func TestSyslog(t *testing.T) {
 		path := filepath.Join(tmpdir, "devlog")
 		var buf cypress.BufferReceiver
 
-		sl, err := NewSyslogDgram(path, &buf)
+		sl, err := NewSyslogDgram(path)
 		require.NoError(t, err)
 
 		sw, err := syslog.Dial("unixgram", path, syslog.LOG_INFO, "test")
@@ -97,7 +97,7 @@ func TestSyslog(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := sl.Run()
+			err := sl.Run(&buf)
 			if err != nil {
 				if !strings.Contains(err.Error(), "closed") {
 					t.Fatalf("error running: %s", err)
@@ -138,7 +138,7 @@ func TestSyslog(t *testing.T) {
 
 		defer tcp.Close()
 
-		sl, err := NewSyslogFromListener(tcp, &buf)
+		sl, err := NewSyslogFromListener(tcp)
 		require.NoError(t, err)
 
 		sw, err := syslog.Dial("tcp", tcp.Addr().String(), syslog.LOG_INFO, "test")
@@ -149,7 +149,7 @@ func TestSyslog(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			sl.Run()
+			sl.Run(&buf)
 		}()
 
 		sw.Info("this is from golang tests")
@@ -329,9 +329,9 @@ func TestSyslog(t *testing.T) {
 
 		var recv cypress.BufferReceiver
 
-		s := &Syslog{r: &recv, OctetCounted: true}
+		s := &Syslog{OctetCounted: true}
 
-		err := s.runConn(&buf)
+		err := s.runConn(&buf, &recv)
 		require.Equal(t, err, io.EOF)
 
 		m1 := recv.Messages[0]

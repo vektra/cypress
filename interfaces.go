@@ -11,6 +11,18 @@ type Generator interface {
 	Close() error
 }
 
+// A core interface, represents a type that runs and sends messages
+// to a downstream receiver
+type Runner interface {
+	Run(r Receiver) error
+}
+
+// A core interface, representing a type that takes a message and returns
+// a new message. The returned message can be nil.
+type Filterer interface {
+	Filter(m *Message) (*Message, error)
+}
+
 // Use to allow types to handle new Generators as they're created
 type GeneratorHandler interface {
 	HandleGenerator(g Generator)

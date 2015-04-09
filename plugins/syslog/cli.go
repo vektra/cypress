@@ -46,7 +46,7 @@ func (s *CLI) Execute(args []string) error {
 	case cnt > 1:
 		return fmt.Errorf("specify only one method")
 	case s.Dgram != "":
-		conn, err = NewSyslogDgram(s.Dgram, r)
+		conn, err = NewSyslogDgram(s.Dgram)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (s *CLI) Execute(args []string) error {
 			return err
 		}
 
-		conn, err = NewSyslogFromListener(l, r)
+		conn, err = NewSyslogFromListener(l)
 		if err != nil {
 			return err
 		}
@@ -74,13 +74,13 @@ func (s *CLI) Execute(args []string) error {
 			return err
 		}
 
-		conn, err = NewSyslogFromConn(c, r)
+		conn, err = NewSyslogFromConn(c)
 		if err != nil {
 			return err
 		}
 	}
 
-	return conn.Run()
+	return conn.Run(r)
 }
 
 func init() {

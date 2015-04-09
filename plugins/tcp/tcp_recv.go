@@ -92,6 +92,22 @@ func NewTCPRecvGenerator(host string) (*TCPRecvGenerator, error) {
 	return g, nil
 }
 
+func (t *TCPRecvGenerator) Run(r cypress.Receiver) error {
+	for {
+		m, ok := <-t.buf
+		if !ok {
+			return io.EOF
+		}
+
+		err := r.Receive(m)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (t *TCPRecvGenerator) Generate() (*cypress.Message, error) {
 	m, ok := <-t.buf
 	if !ok {
