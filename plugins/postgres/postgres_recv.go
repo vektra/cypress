@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/lib/pq/hstore"
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
 )
@@ -99,8 +100,8 @@ func (pr *PostgresRecv) Search(o *Options) ([]*cypress.Message, error) {
 		version    int32
 		msgType    uint32
 		sessionId  string
-		attributes string
-		tags       string
+		attributes hstore.Hstore
+		tags       hstore.Hstore
 
 		messages []*cypress.Message
 	)
@@ -125,6 +126,19 @@ func (pr *PostgresRecv) Search(o *Options) ([]*cypress.Message, error) {
 			Type:      &msgType,
 			SessionId: &sessionId,
 		}
+
+		for key, value := range attributes.Map {
+			if value.Valid {
+				message.Add(key, value.String)
+			}
+		}
+
+		for key, value := range tags.Map {
+			if value.Valid {
+				message.AddTag(key, value.String)
+			}
+		}
+
 		messages = append(messages, message)
 	}
 

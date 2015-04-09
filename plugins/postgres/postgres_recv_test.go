@@ -263,6 +263,16 @@ func TestPostgresOnline(t *testing.T) {
 		require.Equal(t, msg.Version, version)
 		require.Equal(t, *msg.Type, msgType)
 		require.Equal(t, *msg.SessionId, sessionId)
+
+		tag, ok := msg.GetTag("key")
+
+		require.True(t, ok)
+		require.Equal(t, "value", tag)
+
+		attribute, ok := msg.GetString("message")
+
+		require.True(t, ok)
+		require.Equal(t, "hiiiii", attribute)
 	})
 
 	n.Meow()
