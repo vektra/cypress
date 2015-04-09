@@ -171,7 +171,12 @@ func (r *Router) wireRoutes() error {
 				return errors.Subject(ErrUnknownPlugin, name)
 			}
 
-			gen, err := def.Plugin.Generator()
+			gp, ok := def.Plugin.(cypress.GeneratorPlugin)
+			if !ok {
+				return errors.Subject(ErrInvalidGenerator, name)
+			}
+
+			gen, err := gp.Generator()
 			if err != nil {
 				return errors.Subject(err, name)
 			}
@@ -212,7 +217,12 @@ func (r *Router) wireRoutes() error {
 				return errors.Subject(ErrUnknownPlugin, name)
 			}
 
-			recv, err := def.Plugin.Receiver()
+			rp, ok := def.Plugin.(cypress.ReceiverPlugin)
+			if !ok {
+				return errors.Subject(ErrInvalidGenerator, name)
+			}
+
+			recv, err := rp.Receiver()
 			if err != nil {
 				return errors.Subject(err, name)
 			}

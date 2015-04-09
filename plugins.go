@@ -14,8 +14,13 @@ var (
 )
 
 // An interface implemented by plugins used by the router
-type Plugin interface {
+type Plugin interface{}
+
+type ReceiverPlugin interface {
 	Receiver() (Receiver, error)
+}
+
+type GeneratorPlugin interface {
 	Generator() (Generator, error)
 }
 
