@@ -20,6 +20,8 @@ const (
 	cVersionStmt       = ` AND version = %d`
 	cTypeStmt          = ` AND type = %d`
 	cSessionStmt       = ` AND session_id = '%s'`
+	cAttributeStmt     = ` AND attributes->'%s' = '%s'`
+	cTagStmt           = ` AND tags->'%s' = '%s'`
 	cOrderAscStmt      = ` ORDER BY timestamp ASC`
 	cOrderDescStmt     = ` ORDER BY timestamp DESC`
 	cLimitStmt         = ` LIMIT %d`
@@ -33,13 +35,17 @@ type PostgresRecv struct {
 }
 
 type Options struct {
-	Start     string
-	End       string
-	Version   int32
-	Type      uint32
-	SessionId string
-	Order     string
-	Limit     uint
+	Start          string
+	End            string
+	Version        int32
+	Type           uint32
+	SessionId      string
+	AttributeKey   string
+	AttributeValue string
+	TagKey         string
+	TagValue       string
+	Order          string
+	Limit          uint
 }
 
 func NewPostgresRecv(postgres *Postgres, options *Options, bufferSize int) (*PostgresRecv, error) {
@@ -77,6 +83,14 @@ func (pr *PostgresRecv) BuildStmt(o *Options) string {
 
 	if o.SessionId != "" {
 		buf.WriteString(fmt.Sprintf(cSessionStmt, o.SessionId))
+	}
+
+	if o.AttributeKey != "" && o.AttributeValue != "" {
+		buf.WriteString(fmt.Sprintf(cAttributeStmt, o.AttributeKey, o.AttributeValue))
+	}
+
+	if o.TagKey != "" && o.TagValue != "" {
+		buf.WriteString(fmt.Sprintf(cTagStmt, o.TagKey, o.TagValue))
 	}
 
 	if o.Order == "asc" || o.Order == "ASC" {

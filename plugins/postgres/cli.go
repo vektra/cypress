@@ -58,13 +58,17 @@ type Recv struct {
 	SSLKey      string `long:"sslkey" description:"Key file location. The file must contain PEM encoded data."`
 	SSLRootCert string `long:"sslrootcert" description:"The location of the root certificate file. The file must contain PEM encoded data."`
 
-	Start     string
-	End       string
-	Version   int32
-	Type      uint32
-	SessionId string
-	Order     string
-	Limit     uint
+	Start          string
+	End            string
+	Version        int32
+	Type           uint32
+	SessionId      string
+	AttributeKey   string
+	AttributeValue string
+	TagKey         string
+	TagValue       string
+	Order          string
+	Limit          uint
 
 	BufferSize int `long:"buffersize" default:"100"`
 }

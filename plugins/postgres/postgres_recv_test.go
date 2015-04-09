@@ -100,6 +100,22 @@ func TestPostgresRecvBuildStmt(t *testing.T) {
 		require.Equal(t, expected, actual)
 	})
 
+	n.It("uses attribute key and value options when present", func() {
+		options := &Options{AttributeKey: "message", AttributeValue: "testing"}
+		expected := "SELECT timestamp, version, type, session_id, attributes, tags FROM cypress_messages WHERE timestamp IS NOT NULL AND attributes->'message' = 'testing' ORDER BY timestamp DESC LIMIT 1"
+		actual := pr.BuildStmt(options)
+
+		require.Equal(t, expected, actual)
+	})
+
+	n.It("uses tag key and value options when present", func() {
+		options := &Options{TagKey: "message", TagValue: "testing"}
+		expected := "SELECT timestamp, version, type, session_id, attributes, tags FROM cypress_messages WHERE timestamp IS NOT NULL AND tags->'message' = 'testing' ORDER BY timestamp DESC LIMIT 1"
+		actual := pr.BuildStmt(options)
+
+		require.Equal(t, expected, actual)
+	})
+
 	n.It("uses asc order option when present", func() {
 		options := &Options{Order: "ASC"}
 		expected := "SELECT timestamp, version, type, session_id, attributes, tags FROM cypress_messages WHERE timestamp IS NOT NULL ORDER BY timestamp ASC LIMIT 1"
@@ -245,11 +261,15 @@ func TestPostgresOnline(t *testing.T) {
 		require.Equal(t, msg.HstoreTags(), tags)
 
 		options := &Options{
-			Version:   msg.Version,
-			Type:      *msg.Type,
-			SessionId: *msg.SessionId,
-			Order:     "ASC",
-			Limit:     1,
+			Version:        msg.Version,
+			Type:           *msg.Type,
+			SessionId:      *msg.SessionId,
+			AttributeKey:   "message",
+			AttributeValue: "hiiiii",
+			TagKey:         "key",
+			TagValue:       "value",
+			Order:          "ASC",
+			Limit:          1,
 		}
 
 		pr, _ := NewPostgresRecv(&p, options, 1)
