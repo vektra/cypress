@@ -3,7 +3,6 @@ package geoip
 import (
 	"fmt"
 	"net"
-	"os"
 
 	maxmind "github.com/oschwald/geoip2-golang"
 	"github.com/vektra/cypress"
@@ -80,14 +79,7 @@ func (g *GeoDB) Execute(args []string) error {
 		return err
 	}
 
-	dec, err := cypress.NewStreamDecoder(os.Stdin)
-	if err != nil {
-		return err
-	}
-
-	enc := cypress.NewStreamEncoder(os.Stdout)
-
-	return cypress.GlueFiltered(dec, g, enc)
+	return cypress.StandardStreamFilter(g)
 }
 
 func init() {

@@ -1,6 +1,9 @@
 package cypress
 
-import "io"
+import (
+	"io"
+	"os"
+)
 
 // Read messages from gen and send them to recv
 func Glue(gen Generator, recv Receiver) error {
@@ -59,4 +62,15 @@ func GlueFiltered(gen Generator, filt Filterer, recv Receiver) error {
 	}
 
 	return nil
+}
+
+func StandardStreamFilter(f Filterer) error {
+	dec, err := NewStreamDecoder(os.Stdin)
+	if err != nil {
+		return err
+	}
+
+	enc := NewStreamEncoder(os.Stdout)
+
+	return GlueFiltered(dec, f, enc)
 }

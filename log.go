@@ -609,6 +609,17 @@ func (m *Message) GetTag(key string) (string, bool) {
 	return "", false
 }
 
+// Remove an attribute by name from the message
+func (m *Message) Remove(key string) error {
+	for idx, attr := range m.Attributes {
+		if attr.StringKey(m) == key {
+			m.Attributes = append(m.Attributes[:idx], m.Attributes[idx+1:]...)
+		}
+	}
+
+	return nil
+}
+
 // Add a new attribute to the Message. The type of the attribute is infered
 // from the type of val.
 // This understands:
