@@ -6,6 +6,7 @@ package samefile
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 )
 
 type ID string
@@ -23,10 +24,18 @@ func Calculate(path string) (ID, error) {
 }
 
 func Check(id ID, path string) bool {
+	return CheckValid(id, path) == nil
+}
+
+func CheckValid(id ID, path string) error {
 	other, err := Calculate(path)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return id == other
+	if id != other {
+		return fmt.Errorf("SamefileIDs don't match: %s <> %s", id, other)
+	}
+
+	return nil
 }

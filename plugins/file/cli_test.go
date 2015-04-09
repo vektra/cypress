@@ -109,7 +109,7 @@ func TestCLI(t *testing.T) {
 		entry, err := db.Get(file)
 		require.NoError(t, err)
 
-		require.True(t, entry.Valid())
+		require.NoError(t, entry.CheckValid())
 		require.True(t, entry.Offset > 0)
 
 		err = cli.Execute([]string{file})

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -100,15 +101,24 @@ func (o *OffsetDB) Get(path string) (*Entry, error) {
 	return &entry, nil
 }
 
-func (e *Entry) Valid() bool {
-	if !samefile.Check(e.SameFileID, e.Path) {
-		return false
+func (e *Entry) CheckValid() error {
+	err := samefile.CheckValid(e.SameFileID, e.Path)
+	if err != nil {
+		return err
 	}
 
 	stat, err := os.Stat(e.Path)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return stat.Size() >= e.Offset
+	if stat.Size() < e.Offset {
+		return fmt.Errorf("Current file smaller that offset: %d <> %d", stat.Size(), e.Offset)
+	}
+
+	return nil
+}
+
+func (e *Entry) Valid() bool {
+	return e.CheckValid() == nil
 }
