@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/lib/pq/hstore"
 	"github.com/vektra/cypress"
 	"github.com/vektra/tai64n"
@@ -110,10 +112,10 @@ func (pr *PostgresRecv) BuildStmt(o *Options) string {
 
 func (pr *PostgresRecv) Search(o *Options) ([]*cypress.Message, error) {
 	var (
-		timestamp  time.Time
-		version    int32
-		msgType    uint32
-		sessionId  string
+		timestamp  pq.NullTime
+		version    sql.NullInt64
+		msgType    sql.NullInt64
+		sessionId  sql.NullString
 		attributes hstore.Hstore
 		tags       hstore.Hstore
 
@@ -134,11 +136,22 @@ func (pr *PostgresRecv) Search(o *Options) ([]*cypress.Message, error) {
 			return nil, err
 		}
 
-		message := &cypress.Message{
-			Timestamp: tai64n.FromTime(timestamp),
-			Version:   version,
-			Type:      &msgType,
-			SessionId: &sessionId,
+		message := cypress.Log()
+		if timestamp.Valid {
+			message.Timestamp = tai64n.FromTime(timestamp.Time)
+		}
+
+		if version.Valid {
+			message.Version = int32(version.Int64)
+		}
+
+		if msgType.Valid {
+			numType := uint32(msgType.Int64)
+			message.Type = &numType
+		}
+
+		if sessionId.Valid {
+			message.SessionId = &sessionId.String
 		}
 
 		for key, value := range attributes.Map {
@@ -169,7 +182,7 @@ func (pr *PostgresRecv) BufferMessages(messages []*cypress.Message) error {
 		select {
 
 		case pr.MessageBuffer <- message:
-			// TODO: update something for paging
+			pr.Options.Start = message.GetTimestamp().Time().Format(time.RFC3339)
 
 		default:
 			break

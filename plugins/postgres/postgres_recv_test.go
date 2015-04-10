@@ -155,6 +155,19 @@ func TestBufferMessages(t *testing.T) {
 		require.Equal(t, expected, actual)
 	})
 
+	n.It("sets start to be the timestamp from the added event", func() {
+		pr, _ := NewPostgresRecv(&Postgres{}, defaults, 100)
+
+		var messages []*cypress.Message
+		expected := cypress.Log()
+		messages = append(messages, expected)
+
+		err := pr.BufferMessages(messages)
+		require.NoError(t, err)
+
+		require.Equal(t, expected.GetTimestamp().Time().Format(time.RFC3339), pr.Options.Start)
+	})
+
 	n.It("does not wait on full buffer", func() {
 		pr, _ := NewPostgresRecv(&Postgres{}, defaults, 1)
 
