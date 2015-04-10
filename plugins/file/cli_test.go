@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,11 @@ func TestCLI(t *testing.T) {
 		defer f.Close()
 		defer os.Remove(file)
 
+		stat, err := os.Stat(file)
+		require.NoError(t, err)
+
+		fmt.Printf("before: %#v\n", stat.Sys().(*syscall.Stat_t))
+
 		fmt.Fprintf(f, "from the file\n")
 
 		dbpath := filepath.Join(tmpdir, "db")
@@ -108,6 +114,11 @@ func TestCLI(t *testing.T) {
 
 		entry, err := db.Get(file)
 		require.NoError(t, err)
+
+		stat, err = os.Stat(file)
+		require.NoError(t, err)
+
+		fmt.Printf("after: %#v\n", stat.Sys().(*syscall.Stat_t))
 
 		require.NoError(t, entry.CheckValid())
 		require.True(t, entry.Offset > 0)
