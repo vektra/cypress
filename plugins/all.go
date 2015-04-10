@@ -10,7 +10,7 @@ import (
 	_ "github.com/vektra/cypress/plugins/logstash"
 	_ "github.com/vektra/cypress/plugins/metrics"
 	_ "github.com/vektra/cypress/plugins/papertrail"
-	_ "github.com/vektra/cypress/plugins/postgresql"
+	_ "github.com/vektra/cypress/plugins/postgres"
 	_ "github.com/vektra/cypress/plugins/s3"
 	_ "github.com/vektra/cypress/plugins/spool"
 	_ "github.com/vektra/cypress/plugins/statsd"
