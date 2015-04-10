@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,15 +123,12 @@ func TestOffsetDB(t *testing.T) {
 		require.NoError(t, err)
 
 		f.Close()
-		os.Remove(fp)
 
-		_, err = os.Stat(fp)
-		require.Error(t, err)
-
-		time.Sleep(100 * time.Millisecond)
-
-		f, err = os.Create(fp)
+		f, err = os.Create(fp + ".new")
 		require.NoError(t, err)
+
+		os.Remove(fp)
+		os.Rename(fp+".new", fp)
 
 		defer f.Close()
 
