@@ -120,10 +120,10 @@ func init() {
 	short := "Send messages to Postgres"
 	long := "Given a stream on stdin, the postgres command will read those messages in and send them to Postgres."
 
-	commands.Add("send", short, long, &Send{})
+	commands.Add("postgres:send", short, long, &Send{})
 
 	short = "Get messages from Postgres"
 	long = ""
 
-	commands.Add("recv", short, long, &Recv{})
+	commands.Add("postgres:recv", short, long, &Recv{})
 }
