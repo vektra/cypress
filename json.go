@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -143,6 +144,28 @@ func ParseSimpleJSON(data []byte) (*Message, error) {
 	return m, nil
 }
 
+func findTarget(key string, m map[string]interface{}) (string, map[string]interface{}) {
+	parts := strings.Split(key, ".")
+
+	for _, part := range parts[:len(parts)-1] {
+		s, ok := m[part]
+		if !ok {
+			sm := make(map[string]interface{})
+			m[part] = sm
+			m = sm
+		} else {
+			sm, ok := s.(map[string]interface{})
+			if ok {
+				m = sm
+			} else {
+				break
+			}
+		}
+	}
+
+	return parts[len(parts)-1], m
+}
+
 // Return a simple map representing the Message used to generate
 // JSON
 func (m *Message) SimpleJSONMap() map[string]interface{} {
@@ -173,6 +196,16 @@ func (m *Message) SimpleJSONMap() map[string]interface{} {
 	for _, attr := range m.Attributes {
 		var val interface{}
 
+		key := attr.StringKey(m)
+
+		var target map[string]interface{}
+
+		if strings.Contains(key, ".") {
+			key, target = findTarget(key, p)
+		} else {
+			target = p
+		}
+
 		switch {
 		case attr.Ival != nil:
 			val = *attr.Ival
@@ -195,7 +228,7 @@ func (m *Message) SimpleJSONMap() map[string]interface{} {
 			val = true
 		}
 
-		p[attr.StringKey(m)] = val
+		target[key] = val
 	}
 
 	return p

@@ -45,6 +45,19 @@ func TestJSONMap(t *testing.T) {
 		assert.Equal(t, ivm, p["timing"])
 	})
 
+	n.It("expands dotted names into subobjects", func() {
+		m := Log()
+		m.Add("geoip.latitude", 38)
+		m.Add("geoip.longitude", -91)
+
+		p := m.SimpleJSONMap()
+
+		sm := p["geoip"].(map[string]interface{})
+
+		assert.Equal(t, 38, sm["latitude"])
+		assert.Equal(t, -91, sm["longitude"])
+	})
+
 	n.It("can create a new Message given the simple JSON format", func() {
 		m := Log()
 		m.AddTag("region", "us-west-1")
