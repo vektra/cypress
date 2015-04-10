@@ -3,7 +3,6 @@ package logstash
 import (
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
@@ -25,20 +24,6 @@ func (p *Send) Execute(args []string) error {
 		return err
 	}
 
-	var wg sync.WaitGroup
-
-	defer wg.Wait()
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
-		logstash.Run()
-	}()
-
-	defer logstash.Close()
-
 	return cypress.Glue(dec, logstash)
 }
 
@@ -46,5 +31,5 @@ func init() {
 	short := "Send messages to Logstash"
 	long := "Given a stream on stdin, the logstash command will read those messages in and send them to Logstash via TCP."
 
-	commands.Add("logstash", short, long, &Send{})
+	commands.Add("logstash:send", short, long, &Send{})
 }

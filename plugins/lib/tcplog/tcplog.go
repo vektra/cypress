@@ -25,6 +25,8 @@ type Logger struct {
 	PumpClosed  bool
 	PumpDropped uint64
 	ConnDropped uint64
+
+	syncConn net.Conn
 }
 
 func NewLogger(address string, ssl bool, formatter Formatter) *Logger {
@@ -62,10 +64,44 @@ func (l *Logger) Read(message interface{}) (err error) {
 		return errors.New("Unable to read message type")
 	}
 
-	return l.write(data)
+retry:
+	for l.syncConn == nil {
+		c, err := l.dial()
+		if err != nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		l.syncConn = c
+	}
+
+	_, err = l.syncConn.Write(data)
+
+	if err != nil {
+		goto retry
+	}
+
+	return nil
 }
 
-func (l *Logger) write(line []byte) (err error) {
+func (l *Logger) ReadAsync(message interface{}) (err error) {
+	var data []byte
+
+	switch m := message.(type) {
+	case []byte:
+		data = m
+	case string:
+		data = []byte(m)
+	case *cypress.Message:
+		data, _ = l.Format(m)
+	default:
+		return errors.New("Unable to read message type")
+	}
+
+	return l.writeAsync(data)
+}
+
+func (l *Logger) writeAsync(line []byte) (err error) {
 	if l.PumpClosed == true {
 		return errors.New("Pump is closed")
 	}
