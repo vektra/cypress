@@ -24,8 +24,6 @@ func (p *Send) Execute(args []string) error {
 		return err
 	}
 
-	papertrail.Run()
-
 	return cypress.Glue(dec, papertrail)
 }
 

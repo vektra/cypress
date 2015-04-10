@@ -39,7 +39,6 @@ func TestPapertrailRunWithTestServer(t *testing.T) {
 	go s.Run("127.0.0.1")
 
 	l := NewLogger(<-s.Address, false)
-	go l.Run()
 
 	message := tcplog.NewMessage(t)
 	l.Read(message)

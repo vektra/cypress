@@ -25,8 +25,6 @@ func (p *Send) Execute(args []string) error {
 		return err
 	}
 
-	logentries.Run()
-
 	return cypress.Glue(dec, logentries)
 }
 

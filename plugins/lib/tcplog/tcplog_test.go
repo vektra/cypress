@@ -20,15 +20,26 @@ func (tf *TestFormatter) Format(m *cypress.Message) ([]byte, error) {
 func TestRead(t *testing.T) {
 	n := neko.Start(t)
 
-	var l *Logger
+	var (
+		l *Logger
+		s *TcpServer
+	)
 
 	n.Setup(func() {
-		l = NewLogger("", false, &TestFormatter{})
+		s = NewTcpServer()
+
+		go s.Run("127.0.0.1")
+
+		l = NewLogger(<-s.Address, false, &TestFormatter{})
 	})
 
 	n.It("reads a byte slice", func() {
 		ok := l.Read([]byte("This is a long line"))
 		assert.NoError(t, ok)
+
+		m := <-s.Messages
+
+		assert.Equal(t, string("This is a long line"), string(m))
 	})
 
 	n.It("reads a string", func() {
@@ -59,11 +70,15 @@ func TestWrite(t *testing.T) {
 	)
 
 	n.Setup(func() {
-		l = NewLogger("", false, &TestFormatter{})
+		s := NewTcpServer()
+
+		go s.Run("127.0.0.1")
+
+		l = NewLogger(<-s.Address, false, &TestFormatter{})
 	})
 
 	n.It("adds a log line to the pump", func() {
-		l.write(line)
+		l.writeAsync(line)
 
 		select {
 		case pumpLine := <-l.Pump:
@@ -79,7 +94,7 @@ func TestWrite(t *testing.T) {
 
 	n.It("adds an error line to the pump if lines were dropped", func() {
 		l.PumpDropped = 1
-		l.write(line)
+		l.writeAsync(line)
 
 		select {
 		case <-l.Pump:
@@ -98,7 +113,7 @@ func TestWrite(t *testing.T) {
 
 	n.It("does not add a log line and increments dropped counter if pump is full ", func() {
 		l.Pump = make(chan []byte, 0)
-		l.write(line)
+		l.writeAsync(line)
 
 		select {
 		case <-l.Pump:

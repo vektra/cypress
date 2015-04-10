@@ -3,7 +3,6 @@ package logstash
 import (
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
@@ -24,20 +23,6 @@ func (p *Send) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-
-	var wg sync.WaitGroup
-
-	defer wg.Wait()
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-
-		logstash.Run()
-	}()
-
-	defer logstash.Close()
 
 	return cypress.Glue(dec, logstash)
 }
