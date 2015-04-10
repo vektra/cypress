@@ -65,10 +65,10 @@ func init() {
 	short := "Send messages to Logentries"
 	long := "Given a stream on stdin, the logentries command will read those messages in and send them to Logentries via TCP."
 
-	commands.Add("send", short, long, &Send{})
+	commands.Add("logentries:send", short, long, &Send{})
 
 	short = "Get messages from Logentries"
 	long = ""
 
-	commands.Add("recv", short, long, &Recv{})
+	commands.Add("logentries:recv", short, long, &Recv{})
 }

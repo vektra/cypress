@@ -61,10 +61,10 @@ func init() {
 	short := "Send messages to Loggly"
 	long := "Given a stream on stdin, the loggly command will read those messages in and send them to Loggly via TCP."
 
-	commands.Add("send", short, long, &Send{})
+	commands.Add("loggly:send", short, long, &Send{})
 
 	short = "Get messages from Loggly"
 	long = ""
 
-	commands.Add("recv", short, long, &Recv{})
+	commands.Add("loggly:recv", short, long, &Recv{})
 }

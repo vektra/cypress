@@ -65,10 +65,10 @@ func init() {
 	short := "Send messages to Papertrail"
 	long := "Given a stream on stdin, the papertrail command will read those messages in and send them to Papertrail via TCP."
 
-	commands.Add("send", short, long, &Send{})
+	commands.Add("papertrail:send", short, long, &Send{})
 
 	short = "Get messages from Papertrail"
 	long = ""
 
-	commands.Add("recv", short, long, &Recv{})
+	commands.Add("papertrail:recv", short, long, &Recv{})
 }

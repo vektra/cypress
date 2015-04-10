@@ -46,5 +46,5 @@ func init() {
 	short := "Send messages to Logstash"
 	long := "Given a stream on stdin, the logstash command will read those messages in and send them to Logstash via TCP."
 
-	commands.Add("send", short, long, &Send{})
+	commands.Add("logstash", short, long, &Send{})
 }
