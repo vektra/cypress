@@ -157,3 +157,8 @@ func (l *Logger) cleanup() {
 		l.PumpClosed = true
 	}
 }
+
+func (l *Logger) Close() error {
+	l.cleanup()
+	return nil
+}

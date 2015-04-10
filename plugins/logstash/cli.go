@@ -3,6 +3,7 @@ package logstash
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
@@ -11,7 +12,7 @@ import (
 type Send struct {
 	Host string `short:"H" long:"host" description:"Logstash host <host>:<port>"`
 	Port string `short:"P" long:"port" description:"Logstash port <host>:<port>"`
-	Ssl  bool   `short:"S" long:"tls" default:"true" description:"Use TLS"`
+	Ssl  bool   `short:"S" long:"tls" default:"false" description:"Use TLS"`
 }
 
 func (p *Send) Execute(args []string) error {
@@ -24,7 +25,19 @@ func (p *Send) Execute(args []string) error {
 		return err
 	}
 
-	logstash.Run()
+	var wg sync.WaitGroup
+
+	defer wg.Wait()
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		logstash.Run()
+	}()
+
+	defer logstash.Close()
 
 	return cypress.Glue(dec, logstash)
 }
