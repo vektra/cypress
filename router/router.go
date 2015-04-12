@@ -18,11 +18,11 @@ type PluginDefinition struct {
 }
 
 type Route struct {
-	Name     string
-	Enabled  bool
-	Generate []string
-	Output   []string
-	Filter   []string
+	Name    string
+	Enabled bool
+	Input   []string
+	Output  []string
+	Filter  []string
 
 	generators []cypress.Generator
 	receivers  []cypress.Receiver
@@ -138,10 +138,10 @@ func (r *Router) Open() error {
 
 	if len(r.routes) == 0 {
 		r.routes["Default"] = &Route{
-			Name:     "Default",
-			Enabled:  true,
-			Generate: []string{"in"},
-			Output:   []string{"out"},
+			Name:    "Default",
+			Enabled: true,
+			Input:   []string{"in"},
+			Output:  []string{"out"},
 		}
 	}
 
@@ -165,7 +165,7 @@ func (r *Router) wireRoutes() error {
 			continue
 		}
 
-		for _, name := range route.Generate {
+		for _, name := range route.Input {
 			def, ok := r.plugins[name]
 			if !ok {
 				return errors.Subject(ErrUnknownPlugin, name)

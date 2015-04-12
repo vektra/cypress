@@ -28,7 +28,7 @@ region = "us-west-1"
 access_key = "blah"
 
 [route.Default]
-generate = ["TCP"]
+input = ["TCP"]
 output = ["main"]
 `
 
@@ -61,7 +61,7 @@ output = ["main"]
 		assert.Equal(t, true, r1.Enabled)
 		assert.Equal(t, "Default", r1.Name)
 
-		assert.Equal(t, []string{"TCP"}, r1.Generate)
+		assert.Equal(t, []string{"TCP"}, r1.Input)
 		assert.Equal(t, []string{"main"}, r1.Output)
 	})
 
@@ -92,7 +92,7 @@ access_key = "blah"
 		assert.Equal(t, true, r1.Enabled)
 		assert.Equal(t, "Default", r1.Name)
 
-		assert.Equal(t, []string{"in"}, r1.Generate)
+		assert.Equal(t, []string{"in"}, r1.Input)
 		assert.Equal(t, []string{"out"}, r1.Output)
 	})
 
@@ -124,7 +124,7 @@ access_key = "blah"
 [output.Test]
 
 [route.Default]
-generate = ["input"]
+input = ["input"]
 output = ["output"]
 `
 
@@ -166,7 +166,7 @@ output = ["output"]
 [filt.Test]
 
 [route.Default]
-generate = ["input"]
+input = ["input"]
 filter = ["filt"]
 output = ["output"]
 `
