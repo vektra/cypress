@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	_ "github.com/vektra/cypress/plugins/elasticsearch"
 	_ "github.com/vektra/cypress/plugins/file"
 	_ "github.com/vektra/cypress/plugins/geoip"
 	_ "github.com/vektra/cypress/plugins/grep"
