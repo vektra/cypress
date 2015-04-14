@@ -29,17 +29,15 @@ type Store struct {
 	template string
 }
 
-func (s *Store) NextIndex() string {
+func (s *Store) nextIndex() string {
 	if s.Index != "" {
 		return s.Index
 	}
 
-	// logstash-%{+YYYY.MM.dd}
-
 	return s.Prefix + "-" + time.Now().Format("2006.01.02")
 }
 
-func (s *Store) FixupHost() {
+func (s *Store) fixupHost() {
 	if strings.HasPrefix(s.Host, "http://") ||
 		strings.HasPrefix(s.Host, "https://") {
 		return
@@ -60,6 +58,7 @@ func (s *Store) connection() Connection {
 	return s.conn
 }
 
+// Check and write an index template for the indexes used
 func (s *Store) SetupTemplate() error {
 	req, err := http.NewRequest("GET", s.Host+"/_template/"+s.template, nil)
 	if err != nil {
@@ -107,11 +106,10 @@ func (s *Store) SetupTemplate() error {
 
 var ErrFromElasticsearch = errors.New("elasticsearch reported an error")
 
+// Write a Message to Elasticsearch
 func (s *Store) Receive(m *cypress.Message) error {
-	idx := s.NextIndex()
+	idx := s.nextIndex()
 	url := s.Host + "/" + idx + "/" + m.StringType()
-
-	fmt.Printf("url: %s\n", url)
 
 	data, err := json.Marshal(m)
 	if err != nil {
@@ -142,6 +140,7 @@ func (s *Store) Receive(m *cypress.Message) error {
 	return err
 }
 
+// Check all the options and get ready to run.
 func (s *Store) Init() error {
 	if s.Logstash {
 		s.template = "logstash"
@@ -151,7 +150,7 @@ func (s *Store) Init() error {
 		s.template = "cypress"
 	}
 
-	s.FixupHost()
+	s.fixupHost()
 	err := s.SetupTemplate()
 	if err != nil {
 		return err
@@ -160,6 +159,7 @@ func (s *Store) Init() error {
 	return nil
 }
 
+// Called when used via the CLI
 func (s *Store) Execute(args []string) error {
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
@@ -172,6 +172,11 @@ func (s *Store) Execute(args []string) error {
 	}
 
 	return cypress.Glue(dec, s)
+}
+
+// To fit the Generator interface
+func (s *Store) Close() error {
+	return nil
 }
 
 func init() {
