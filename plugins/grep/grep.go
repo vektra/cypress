@@ -5,20 +5,27 @@ import (
 	"regexp"
 
 	"github.com/vektra/cypress"
+	"github.com/vektra/cypress/cli/commands"
 )
 
 type Grep struct {
-	out    cypress.Receiver
-	field  string
+	Field   string `short:"f" long:"field" description:"field to match against"`
+	Pattern string `short:"p" long:"pattern" description:"regexp pattern to match value against"`
+
 	regexp *regexp.Regexp
 }
 
-func NewGrep(out cypress.Receiver, field string, regexp *regexp.Regexp) (*Grep, error) {
-	return &Grep{out, field, regexp}, nil
-}
-
 func (g *Grep) Filter(m *cypress.Message) (*cypress.Message, error) {
-	if f, ok := m.Get(g.field); ok {
+	if g.regexp == nil {
+		reg, err := regexp.Compile(g.Pattern)
+		if err != nil {
+			return nil, err
+		}
+
+		g.regexp = reg
+	}
+
+	if f, ok := m.Get(g.Field); ok {
 		var val string
 
 		if s, ok := f.(string); ok {
@@ -35,15 +42,11 @@ func (g *Grep) Filter(m *cypress.Message) (*cypress.Message, error) {
 	return nil, nil
 }
 
-func (g *Grep) Receive(m *cypress.Message) error {
-	m2, err := g.Filter(m)
-	if err != nil {
-		return err
-	}
+func (g *Grep) Execute(args []string) error {
+	return cypress.StandardStreamFilter(g)
+}
 
-	if m2 != nil {
-		return g.out.Receive(m)
-	}
-
-	return nil
+func init() {
+	commands.Add("grep", "filter messages using a regexp against a field", "", &Grep{})
+	cypress.AddPlugin("grep", func() cypress.Plugin { return &Grep{} })
 }
