@@ -9,7 +9,7 @@ import (
 	"github.com/vektra/cypress/cli/commands"
 )
 
-type GeoDB struct {
+type GeoIP struct {
 	Path   string `short:"p" long:"path" description:"Path to maxmind GeoIP database"`
 	Field  string `short:"f" long:"field" description:"Field containing an ip to calculate geo information from"`
 	Strict bool   `short:"s" long:"strict" description:"Error out rather than ignore problems calculate the geoip info"`
@@ -19,18 +19,43 @@ type GeoDB struct {
 	r *maxmind.Reader
 }
 
-func NewGeoDB() (*GeoDB, error) {
-	g := &GeoDB{}
+func NewGeoIP() (*GeoIP, error) {
+	g := &GeoIP{}
 
 	return g, nil
 }
 
-func (g *GeoDB) Open() error {
-	if g.Path == "" {
-		return fmt.Errorf("no database path given")
+func ImplicitPath() string {
+	var cfg struct{ Path string }
+
+	err := cypress.GlobalConfig().Load("geoip", &cfg)
+	if err == nil && cfg.Path != "" {
+		return cfg.Path
 	}
 
-	r, err := maxmind.Open(g.Path)
+	path, ok := cypress.UserFile("geoip.db")
+	if ok {
+		return path
+	}
+
+	path, ok = cypress.GlobalFile("geoip.db")
+	if ok {
+		return path
+	}
+
+	return ""
+}
+
+func (g *GeoIP) Open() error {
+	path := g.Path
+	if path == "" {
+		path = ImplicitPath()
+		if path == "" {
+			return fmt.Errorf("Unable to find a geoip database file to use")
+		}
+	}
+
+	r, err := maxmind.Open(path)
 	if err != nil {
 		return err
 	}
@@ -40,7 +65,7 @@ func (g *GeoDB) Open() error {
 	return nil
 }
 
-func (g *GeoDB) Filterer() (cypress.Filterer, error) {
+func (g *GeoIP) Filterer() (cypress.Filterer, error) {
 	err := g.Open()
 	if err != nil {
 		return nil, err
@@ -49,7 +74,7 @@ func (g *GeoDB) Filterer() (cypress.Filterer, error) {
 	return g, nil
 }
 
-func (g *GeoDB) Filter(m *cypress.Message) (*cypress.Message, error) {
+func (g *GeoIP) Filter(m *cypress.Message) (*cypress.Message, error) {
 	ipStr, ok := m.GetString(g.Field)
 	if !ok {
 		return m, nil
@@ -85,7 +110,7 @@ func (g *GeoDB) Filter(m *cypress.Message) (*cypress.Message, error) {
 	return m, nil
 }
 
-func (g *GeoDB) Execute(args []string) error {
+func (g *GeoIP) Execute(args []string) error {
 	err := g.Open()
 	if err != nil {
 		return err
@@ -95,6 +120,6 @@ func (g *GeoDB) Execute(args []string) error {
 }
 
 func init() {
-	commands.Add("geoip", "calculate geoip information based on a field", "", &GeoDB{})
-	cypress.AddPlugin("geoip", func() cypress.Plugin { return &GeoDB{} })
+	commands.Add("geoip", "calculate geoip information based on a field", "", &GeoIP{})
+	cypress.AddPlugin("geoip", func() cypress.Plugin { return &GeoIP{} })
 }

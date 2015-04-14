@@ -23,12 +23,17 @@ func TestConfig(t *testing.T) {
 	n.It("reads the config via toml", func() {
 		var buf bytes.Buffer
 
+		var tc struct{ AllowUnsigned bool }
+
 		buf.WriteString("[s3]\nallow_unsigned = true\n")
 
 		cfg, err := ParseConfig(&buf)
 		require.NoError(t, err)
 
-		assert.True(t, cfg.S3.AllowUnsigned)
+		err = cfg.Load("s3", &tc)
+		require.NoError(t, err)
+
+		assert.True(t, tc.AllowUnsigned)
 	})
 
 	n.It("loads config from config paths", func() {
@@ -45,7 +50,12 @@ func TestConfig(t *testing.T) {
 
 		cfg := loadGlobalConfig()
 
-		assert.True(t, cfg.S3.AllowUnsigned)
+		var tc struct{ AllowUnsigned bool }
+
+		err = cfg.Load("s3", &tc)
+		require.NoError(t, err)
+
+		assert.True(t, tc.AllowUnsigned)
 	})
 
 	n.Meow()

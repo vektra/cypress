@@ -41,7 +41,10 @@ func TestS3(t *testing.T) {
 
 	spooldir := filepath.Join(tmpdir, "spool")
 
-	s3cfg := cypress.GlobalConfig().S3
+	var s3cfg S3Config
+	err = cypress.GlobalConfig().Load("s3", &s3cfg)
+	require.NoError(t, err)
+
 	defKeys := keystore.Default()
 
 	n.Setup(func() {
@@ -58,7 +61,13 @@ func TestS3(t *testing.T) {
 		awsAuth = aws.Auth{AccessKey: "abc", SecretKey: "123"}
 		s3c = s3.New(awsAuth, awsRegion)
 
-		s3a, err = NewS3(spooldir, bucketName, s3.Private, awsAuth, awsRegion)
+		params := S3Params{
+			ACL:    s3.Private,
+			Auth:   awsAuth,
+			Region: awsRegion,
+		}
+
+		s3a, err = NewS3(spooldir, bucketName, params)
 		require.NoError(t, err)
 
 		err = s3c.Bucket(bucketName).PutBucket(s3.Private)
@@ -66,7 +75,6 @@ func TestS3(t *testing.T) {
 	})
 
 	n.Cleanup(func() {
-		cypress.GlobalConfig().S3 = s3cfg
 		keystore.SetDefault(defKeys)
 
 		os.RemoveAll(spooldir)
@@ -104,7 +112,13 @@ func TestS3(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
-		s, err := NewS3WithSpool(spool, bucketName, s3.Private, awsAuth, awsRegion)
+		params := S3Params{
+			ACL:    s3.Private,
+			Auth:   awsAuth,
+			Region: awsRegion,
+		}
+
+		s, err := NewS3WithSpool(spool, bucketName, params)
 		require.NoError(t, err)
 
 		err = spool.Receive(m)
@@ -191,8 +205,15 @@ func TestS3(t *testing.T) {
 		assert.Equal(t, string(fileData), string(data))
 	})
 
-	n.It("automatically uses a key specified in the global config", func() {
-		cypress.GlobalConfig().S3.SignKey = "foo"
+	n.It("automatically uses a key specified in the config", func() {
+		params := S3Params{
+			Config: &cypress.Config{},
+			ACL:    s3.Private,
+			Auth:   awsAuth,
+			Region: awsRegion,
+		}
+
+		params.Config.AddString("[s3]\nsign_key = \"foo\"\n")
 
 		tk := &keystore.TestKeys{
 			Name: "foo",
@@ -202,7 +223,7 @@ func TestS3(t *testing.T) {
 
 		key := tk.Gen()
 
-		s3a, err = NewS3(spooldir, bucketName, s3.Private, awsAuth, awsRegion)
+		s3a, err = NewS3(spooldir, bucketName, params)
 		require.NoError(t, err)
 
 		assert.Equal(t, key, s3a.signKey)

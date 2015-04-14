@@ -12,17 +12,20 @@ import (
 	"os"
 
 	"github.com/cheggaaa/pb"
+	"github.com/vektra/cypress"
 	"github.com/vektra/cypress/cli/commands"
 )
 
 type Update struct {
-	Path string `short:"p" long:"path" description:"Where to store the database"`
+	Path string `short:"p" long:"path" default:"~/.cypress/geoip.db" description:"Where to store the database"`
 }
 
 const URL = "http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
 const MD5URL = "http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.md5"
 
 func (u *Update) Execute(args []string) error {
+	u.Path = cypress.ExpandPath(u.Path)
+
 	tmp := u.Path + ".tmp"
 
 	f, err := os.Create(tmp)

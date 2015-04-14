@@ -1,7 +1,6 @@
 package geoip
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,23 +9,16 @@ import (
 	"github.com/vektra/neko"
 )
 
-const testDb = "GeoLite2-City.mmdb"
-
 func TestGeoIP(t *testing.T) {
-	path := os.Getenv("GEOIP_DB")
+	path := ImplicitPath()
 	if path == "" {
-		_, err := os.Stat(testDb)
-		if err == nil {
-			path = testDb
-		} else {
-			t.SkipNow()
-		}
+		t.SkipNow()
 	}
 
 	n := neko.Start(t)
 
 	n.It("adds geoip information derived from an ip", func() {
-		g, err := NewGeoDB()
+		g, err := NewGeoIP()
 		require.NoError(t, err)
 
 		g.Path = path

@@ -79,7 +79,7 @@ func (s *S3Plugin) Receiver() (cypress.Receiver, error) {
 		}
 	}
 
-	return NewS3(s.Dir, s.Bucket, acl, auth, region)
+	return NewS3(s.Dir, s.Bucket, S3Params{ACL: acl, Auth: auth, Region: region})
 }
 
 func (s *S3Plugin) Generator() (cypress.Generator, error) {
@@ -104,6 +104,11 @@ func init() {
 	cypress.AddPlugin("S3", func() cypress.Plugin { return &S3Plugin{} })
 }
 
+type S3Config struct {
+	SignKey       string
+	AllowUnsigned bool
+}
+
 type S3 struct {
 	ACL s3.ACL
 
@@ -116,22 +121,46 @@ type S3 struct {
 	signKey *ecdsa.PrivateKey
 }
 
-func NewS3(dir, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S3, error) {
+type S3Params struct {
+	Config *cypress.Config
+	ACL    s3.ACL
+	Auth   aws.Auth
+	Region aws.Region
+}
+
+func (p *S3Params) Client() *s3.S3 {
+	return s3.New(p.Auth, p.Region)
+}
+
+func (p *S3Params) S3Config() *S3Config {
+	cfg := p.Config
+	if cfg == nil {
+		cfg = cypress.GlobalConfig()
+	}
+
+	var s3cfg S3Config
+
+	cfg.Load("s3", &s3cfg)
+
+	return &s3cfg
+}
+
+func NewS3(dir, bucket string, params S3Params) (*S3, error) {
 	spool, err := spool.NewSpool(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	client := s3.New(auth, region)
+	client := params.Client()
 
 	s3 := &S3{
-		ACL:    acl,
+		ACL:    params.ACL,
 		client: client,
 		bucket: client.Bucket(bucket),
 		spool:  spool,
 	}
 
-	err = s3.setupKey()
+	err = s3.setupKey(params)
 	if err != nil {
 		return nil, err
 	}
@@ -141,17 +170,17 @@ func NewS3(dir, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S
 	return s3, nil
 }
 
-func NewS3WithSpool(spool *spool.Spool, bucket string, acl s3.ACL, auth aws.Auth, region aws.Region) (*S3, error) {
-	client := s3.New(auth, region)
+func NewS3WithSpool(spool *spool.Spool, bucket string, params S3Params) (*S3, error) {
+	client := params.Client()
 
 	s3 := &S3{
-		ACL:    acl,
+		ACL:    params.ACL,
 		client: client,
 		bucket: client.Bucket(bucket),
 		spool:  spool,
 	}
 
-	err := s3.setupKey()
+	err := s3.setupKey(params)
 	if err != nil {
 		return nil, err
 	}
@@ -161,13 +190,8 @@ func NewS3WithSpool(spool *spool.Spool, bucket string, acl s3.ACL, auth aws.Auth
 	return s3, nil
 }
 
-func (s *S3) setupKey() error {
-	name := cypress.GlobalConfig().S3.SignKey
-	if name == "" {
-		return nil
-	}
-
-	key, err := keystore.Default().GetPrivate(name)
+func (s *S3) setupKey(params S3Params) error {
+	key, err := params.SignKey()
 	if err != nil {
 		return err
 	}
@@ -175,6 +199,16 @@ func (s *S3) setupKey() error {
 	s.signKey = key
 
 	return nil
+}
+
+func (p *S3Params) SignKey() (*ecdsa.PrivateKey, error) {
+	cfg := p.S3Config()
+
+	if cfg.SignKey == "" {
+		return nil, nil
+	}
+
+	return keystore.Default().GetPrivate(cfg.SignKey)
 }
 
 func (s *S3) SignWith(k *ecdsa.PrivateKey) {
@@ -319,15 +353,22 @@ type S3Generator struct {
 func NewS3Generator(bucket string, auth aws.Auth, region aws.Region) (*S3Generator, error) {
 	client := s3.New(auth, region)
 
+	var cfg S3Config
+
+	err := cypress.GlobalConfig().Load("s3", &cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	gen := &S3Generator{
-		AllowUnsigned: cypress.GlobalConfig().S3.AllowUnsigned,
+		AllowUnsigned: cfg.AllowUnsigned,
 		client:        client,
 		bucket:        client.Bucket(bucket),
 		cur:           -1,
 		listMax:       100,
 	}
 
-	err := gen.updateList()
+	err = gen.updateList()
 	if err != nil {
 		return nil, err
 	}

@@ -8,19 +8,26 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+const CypressPathEnv = "CYPRESS_PATH"
+
 var globalConfig *Config
+
+// Paths that can contain any global cypress data
+var GlobalPaths []string
 
 // Paths that can hold the global config
 var GlobalConfigPaths []string
 
 // Paths that, if they exist, are added to GlobalConfigPaths
-var PotentialGlobalConfigPaths = []string{
-	"/etc/cypress/config",
-	"/var/lib/cypress/config",
+var PotentialGlobalPaths = []string{
+	"/etc/cypress",
+	"/var/lib/cypress",
 }
 
+var UserPath = ".cypress"
+
 // The path under a users home for the user config
-var UserConfigPath = ".cypress/config"
+var UserConfigPath = UserPath + "/config"
 
 var globalConfigLoaded sync.Once
 
@@ -53,9 +60,45 @@ func loadGlobalConfig() *Config {
 	return &cfg
 }
 
+// Retrieve the path for under the users .cypress directory
+func UserFile(path string) (string, bool) {
+	if HomeDir == "" {
+		return "", false
+	}
+
+	fp := filepath.Join(HomeDir, UserPath, path)
+
+	_, err := os.Stat(fp)
+	if err != nil {
+		return "", false
+	}
+
+	return fp, true
+}
+
+// Retrieve the path for under global cypress directories
+func GlobalFile(path string) (string, bool) {
+	for _, gp := range GlobalPaths {
+		fp := filepath.Join(gp, path)
+
+		_, err := os.Stat(fp)
+		if err == nil {
+			return fp, true
+		}
+	}
+
+	return "", false
+}
+
+var HomeDir string
+
 func init() {
 	dir, err := homedir.Dir()
 	if err == nil && dir != "" {
+		HomeDir = dir
+
+		os.Mkdir(filepath.Join(dir, UserPath), 0700)
+
 		cfgdir := filepath.Join(dir, UserConfigPath)
 
 		if _, err := os.Stat(cfgdir); err == nil {
@@ -63,9 +106,20 @@ func init() {
 		}
 	}
 
-	for _, path := range PotentialGlobalConfigPaths {
+	path := os.Getenv(CypressPathEnv)
+
+	if path != "" {
+		PotentialGlobalPaths = append(PotentialGlobalPaths, path)
+	}
+
+	for _, path := range PotentialGlobalPaths {
 		if _, err := os.Stat(path); err == nil {
-			GlobalConfigPaths = append(GlobalConfigPaths, path)
+			GlobalPaths = append(GlobalPaths, path)
+
+			cfg := filepath.Join(path, "config")
+			if _, err := os.Stat(cfg); err == nil {
+				GlobalConfigPaths = append(GlobalConfigPaths, cfg)
+			}
 		}
 	}
 }
