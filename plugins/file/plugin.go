@@ -5,7 +5,7 @@ import "path/filepath"
 
 type Plugin struct {
 	Paths    []string
-	OffsetDB string
+	OffsetDB string `toml:"offsetdb"`
 }
 
 func (p *Plugin) Generator() (cypress.Generator, error) {
