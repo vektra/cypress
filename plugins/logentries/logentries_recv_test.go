@@ -120,7 +120,7 @@ func TestNewEvents(t *testing.T) {
 
 		require.Equal(t, timestamp, message.GetTimestamp().Time())
 		require.Equal(t, "log", message.StringType())
-		require.Equal(t, 1, message.GetVersion())
+		require.Equal(t, int32(1), message.GetVersion())
 	})
 
 	n.It("creates new cypress messages if can't unmarshall response", func() {
@@ -138,7 +138,7 @@ func TestNewEvents(t *testing.T) {
 
 		require.Equal(t, "awesome", msg)
 		require.Equal(t, "log", message.StringType())
-		require.Equal(t, 1, message.GetVersion())
+		require.Equal(t, int32(1), message.GetVersion())
 	})
 
 	n.Meow()

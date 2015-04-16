@@ -198,7 +198,7 @@ func TestNewCypressMessage(t *testing.T) {
 
 		require.Equal(t, timestamp, message.GetTimestamp().Time())
 		require.Equal(t, "log", message.StringType())
-		require.Equal(t, 1, message.GetVersion())
+		require.Equal(t, int32(1), message.GetVersion())
 	})
 
 	n.It("creates new cypress message from invalid json", func() {
@@ -217,7 +217,7 @@ func TestNewCypressMessage(t *testing.T) {
 
 		require.NotEqual(t, timestamp, message.GetTimestamp().Time())
 		require.Equal(t, "log", message.StringType())
-		require.Equal(t, 1, message.GetVersion())
+		require.Equal(t, int32(1), message.GetVersion())
 	})
 
 	n.Meow()

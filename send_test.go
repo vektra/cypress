@@ -179,12 +179,12 @@ func TestSend(t *testing.T) {
 		err := s.Receive(m)
 		require.NoError(t, err)
 
-		assert.Equal(t, s.available, 2)
+		assert.Equal(t, s.available, int32(2))
 
 		err = s.Receive(m)
 		require.NoError(t, err)
 
-		assert.Equal(t, s.available, 1)
+		assert.Equal(t, s.available, int32(1))
 
 		go func() {
 			time.Sleep(1)
@@ -194,7 +194,7 @@ func TestSend(t *testing.T) {
 		err = s.Receive(m)
 		require.NoError(t, err)
 
-		assert.Equal(t, s.available, 3)
+		assert.Equal(t, s.available, int32(3))
 	})
 
 	n.It("can calculate minimize windows to use", func() {

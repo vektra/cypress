@@ -2,7 +2,6 @@ package statsd
 
 import (
 	"net"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -61,7 +60,7 @@ func TestStatsd(t *testing.T) {
 		val, ok := m.GetFloat("value")
 		require.True(t, ok)
 
-		assert.Equal(t, 12, val)
+		assert.Equal(t, float64(12), val)
 	})
 
 	n.It("converts a timer to an Internal", func() {
@@ -87,7 +86,7 @@ func TestStatsd(t *testing.T) {
 		// The Close() here is to get Run() to return, but there is a race
 		// that cause the packet sent above to not get there before the
 		// close so we sched to be sure it does.
-		runtime.Gosched()
+		time.Sleep(100 * time.Millisecond)
 		s.Server.Close()
 
 		require.NoError(t, err)
@@ -109,7 +108,7 @@ func TestStatsd(t *testing.T) {
 		val, ok := m.GetInterval("value")
 		require.True(t, ok)
 
-		assert.Equal(t, 83100000, val.Duration())
+		assert.Equal(t, time.Duration(83100000), val.Duration())
 	})
 
 	n.Meow()

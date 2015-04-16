@@ -24,7 +24,7 @@ func TestServer(t *testing.T) {
 
 		assert.Equal(t, COUNTER, metrics[0].Type)
 		assert.Equal(t, "fun", metrics[0].Bucket)
-		assert.Equal(t, 100, metrics[0].Value)
+		assert.Equal(t, float64(100), metrics[0].Value)
 	})
 
 	n.It("can parse a packet with multiple metrics", func() {
@@ -39,11 +39,11 @@ func TestServer(t *testing.T) {
 
 		assert.Equal(t, COUNTER, metrics[0].Type)
 		assert.Equal(t, "fun", metrics[0].Bucket)
-		assert.Equal(t, 100, metrics[0].Value)
+		assert.Equal(t, float64(100), metrics[0].Value)
 
 		assert.Equal(t, TIMER, metrics[1].Type)
 		assert.Equal(t, "bar", metrics[1].Bucket)
-		assert.Equal(t, 88, metrics[1].Value)
+		assert.Equal(t, float64(88), metrics[1].Value)
 	})
 
 	n.It("can deal with a metric terminating in a newline", func() {
@@ -58,11 +58,11 @@ func TestServer(t *testing.T) {
 
 		assert.Equal(t, COUNTER, metrics[0].Type)
 		assert.Equal(t, "fun", metrics[0].Bucket)
-		assert.Equal(t, 100, metrics[0].Value)
+		assert.Equal(t, float64(100), metrics[0].Value)
 
 		assert.Equal(t, TIMER, metrics[1].Type)
 		assert.Equal(t, "bar", metrics[1].Bucket)
-		assert.Equal(t, 88, metrics[1].Value)
+		assert.Equal(t, float64(88), metrics[1].Value)
 	})
 
 	n.It("listens on a udp socket and accepts packets", func() {

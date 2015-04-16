@@ -39,8 +39,8 @@ func TestGeoIP(t *testing.T) {
 		long, ok := m2.GetFloat("geoip.longitude")
 		require.True(t, ok)
 
-		assert.Equal(t, lat, 38)
-		assert.Equal(t, long, -97)
+		assert.Equal(t, lat, float64(38))
+		assert.Equal(t, long, float64(-97))
 	})
 
 	n.Meow()

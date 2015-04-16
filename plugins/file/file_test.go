@@ -240,12 +240,12 @@ func TestFile(t *testing.T) {
 		l1, err := fo.GenerateLine()
 		require.NoError(t, err)
 
-		assert.Equal(t, 0, l1.Offset)
+		assert.Equal(t, int64(0), l1.Offset)
 
 		l2, err := fo.GenerateLine()
 		require.NoError(t, err)
 
-		assert.Equal(t, len(l1.Line), l2.Offset)
+		assert.Equal(t, int64(len(l1.Line)), l2.Offset)
 	})
 
 	n.It("tracks the offset of lines when following", func() {
@@ -267,12 +267,12 @@ func TestFile(t *testing.T) {
 		l1, err := fo.GenerateLine()
 		require.NoError(t, err)
 
-		assert.Equal(t, 0, l1.Offset)
+		assert.Equal(t, int64(0), l1.Offset)
 
 		l2, err := fo.GenerateLine()
 		require.NoError(t, err)
 
-		assert.Equal(t, len(l1.Line), l2.Offset)
+		assert.Equal(t, int64(len(l1.Line)), l2.Offset)
 	})
 
 	n.Meow()

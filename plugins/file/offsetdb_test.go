@@ -58,7 +58,7 @@ func TestOffsetDB(t *testing.T) {
 		sfid, err := samefile.Calculate(cleanPath(fp))
 
 		assert.Equal(t, cleanPath(fp), entry.Path)
-		assert.Equal(t, 5, entry.Offset)
+		assert.Equal(t, int64(5), entry.Offset)
 		assert.Equal(t, sfid, entry.SameFileID)
 	})
 
@@ -81,7 +81,7 @@ func TestOffsetDB(t *testing.T) {
 		entry, err := db.Get(fp)
 		require.NoError(t, err)
 
-		assert.Equal(t, 5, entry.Offset)
+		assert.Equal(t, int64(5), entry.Offset)
 	})
 
 	n.It("validates true if the file is the same", func() {

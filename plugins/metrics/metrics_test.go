@@ -34,7 +34,7 @@ func TestMetricsSink(t *testing.T) {
 		im, ok := ms.Registry.Get("tests.run").(metrics.Counter)
 		require.True(t, ok)
 
-		assert.Equal(t, 10, im.Count())
+		assert.Equal(t, int64(10), im.Count())
 	})
 
 	n.It("can handle a gauge", func() {
@@ -49,7 +49,7 @@ func TestMetricsSink(t *testing.T) {
 		im, ok := ms.Registry.Get("tests.run").(metrics.GaugeFloat64)
 		require.True(t, ok)
 
-		assert.Equal(t, 10, im.Value())
+		assert.Equal(t, float64(10), im.Value())
 	})
 
 	n.It("can handle a timer", func() {
@@ -64,7 +64,7 @@ func TestMetricsSink(t *testing.T) {
 		im, ok := ms.Registry.Get("tests.time").(metrics.Timer)
 		require.True(t, ok)
 
-		assert.Equal(t, 1234*time.Millisecond, im.Sum())
+		assert.Equal(t, int64(1234*time.Millisecond), im.Sum())
 	})
 
 	n.Meow()

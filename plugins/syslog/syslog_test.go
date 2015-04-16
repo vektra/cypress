@@ -65,7 +65,7 @@ func TestSyslog(t *testing.T) {
 		pid, ok := m.GetInt("pid")
 		require.True(t, ok)
 
-		assert.Equal(t, 64480, pid)
+		assert.Equal(t, int64(64480), pid)
 
 		msg, ok := m.GetString("message")
 		require.True(t, ok)
@@ -341,7 +341,7 @@ func TestSyslog(t *testing.T) {
 		pid1, ok := m1.GetInt("pid")
 		require.True(t, ok)
 
-		assert.Equal(t, 64480, pid1)
+		assert.Equal(t, int64(64480), pid1)
 
 		msg1, ok := m1.GetString("message")
 		require.True(t, ok)
@@ -351,7 +351,7 @@ func TestSyslog(t *testing.T) {
 		pid2, ok := m2.GetInt("pid")
 		require.True(t, ok)
 
-		assert.Equal(t, 64481, pid2)
+		assert.Equal(t, int64(64481), pid2)
 
 		msg2, ok := m2.GetString("message")
 		require.True(t, ok)

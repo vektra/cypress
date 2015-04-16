@@ -449,17 +449,17 @@ func TestAddMap(t *testing.T) {
 	one, ok := m2.Get("things.one")
 	require.True(t, ok)
 
-	assert.Equal(t, one, 1)
+	assert.Equal(t, one, int64(1))
 
 	two, ok := m2.Get("things.two")
 	require.True(t, ok)
 
-	assert.Equal(t, two, 2)
+	assert.Equal(t, two, int64(2))
 
 	three, ok := m2.Get("things.three")
 	require.True(t, ok)
 
-	assert.Equal(t, three, 3)
+	assert.Equal(t, three, int64(3))
 }
 
 type simpleThing struct {
@@ -486,7 +486,7 @@ func TestAddStruct(t *testing.T) {
 	age, ok := m2.Get("things.age")
 	require.True(t, ok)
 
-	assert.Equal(t, age, 18)
+	assert.Equal(t, age, int64(18))
 }
 
 func TestAddPointerToStruct(t *testing.T) {
@@ -508,7 +508,7 @@ func TestAddPointerToStruct(t *testing.T) {
 	age, ok := m2.Get("things.age")
 	require.True(t, ok)
 
-	assert.Equal(t, age, 18)
+	assert.Equal(t, age, int64(18))
 }
 
 func FromProtobuf(buf []byte) (*Message, error) {

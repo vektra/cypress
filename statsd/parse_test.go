@@ -21,7 +21,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, COUNTER)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 1)
+		assert.Equal(t, metric.Value, float64(1))
 	})
 
 	n.It("treats all unknown types as counters", func() {
@@ -33,7 +33,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, COUNTER)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 1)
+		assert.Equal(t, metric.Value, float64(1))
 	})
 
 	n.It("can parse a counter with a sample rate", func() {
@@ -45,7 +45,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, COUNTER)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 10)
+		assert.Equal(t, metric.Value, float64(10))
 	})
 
 	n.It("can parse a gauge", func() {
@@ -57,7 +57,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, GAUGE)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 83)
+		assert.Equal(t, metric.Value, float64(83))
 	})
 
 	n.It("can parse a gauge positive delta", func() {
@@ -69,7 +69,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, GAUGE_DELTA)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 1)
+		assert.Equal(t, metric.Value, float64(1))
 	})
 
 	n.It("can parse a gauge negative delta", func() {
@@ -81,7 +81,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, GAUGE_DELTA)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, -1)
+		assert.Equal(t, metric.Value, float64(-1))
 	})
 
 	n.It("can parse a timiing event", func() {
@@ -94,7 +94,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, TIMER)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 83)
+		assert.Equal(t, metric.Value, float64(83))
 	})
 
 	n.It("can parse a set", func() {
@@ -107,7 +107,7 @@ func TestParse(t *testing.T) {
 
 		assert.Equal(t, metric.Type, SET)
 		assert.Equal(t, metric.Bucket, "gorets")
-		assert.Equal(t, metric.Value, 3241)
+		assert.Equal(t, metric.Value, float64(3241))
 	})
 
 	n.Meow()

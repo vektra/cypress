@@ -31,7 +31,7 @@ func TestJSONMap(t *testing.T) {
 		tags := p["@tags"].(map[string]string)
 		assert.Equal(t, "us-west-1", tags["region"])
 		assert.Equal(t, "world", p["hello"])
-		assert.Equal(t, 1, p["pid"])
+		assert.Equal(t, int64(1), p["pid"])
 		assert.Equal(t, 3.3, p["rate"])
 		assert.Equal(t, map[string][]byte{"bytes": []byte("blah")}, p["bytes"])
 		assert.Equal(t, true, p["awesome"])
@@ -54,8 +54,8 @@ func TestJSONMap(t *testing.T) {
 
 		sm := p["geoip"].(map[string]interface{})
 
-		assert.Equal(t, 38, sm["latitude"])
-		assert.Equal(t, -91, sm["longitude"])
+		assert.Equal(t, int64(38), sm["latitude"])
+		assert.Equal(t, int64(-91), sm["longitude"])
 	})
 
 	n.It("can create a new Message given the simple JSON format", func() {
@@ -88,7 +88,7 @@ func TestJSONMap(t *testing.T) {
 		i, ok := m2.GetInt("pid")
 		require.True(t, ok)
 
-		assert.Equal(t, 1, i)
+		assert.Equal(t, int64(1), i)
 
 		f, ok := m2.GetFloat("rate")
 		require.True(t, ok)
