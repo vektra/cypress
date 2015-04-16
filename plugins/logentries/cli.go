@@ -1,7 +1,6 @@
 package logentries
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/vektra/cypress"
@@ -9,16 +8,13 @@ import (
 )
 
 type Send struct {
-	Host  string `short:"H" long:"host" default:"data.logentries.com" description:"Logentries host <host>:<port>"`
-	Port  string `short:"P" long:"port" default:"2000" description:"Logentries port <host>:<port>"`
-	Ssl   bool   `short:"S" long:"tls" default:"false" description:"Use TLS"`
+	Host  string `short:"H" long:"host" default:"data.logentries.com:2000" description:"Logentries host <host>:<port>"`
+	Ssl   bool   `short:"S" long:"tls" description:"Use TLS"`
 	Token string `short:"T" long:"token" description:"Logentries token that uniquely identifies the destination log"`
 }
 
 func (p *Send) Execute(args []string) error {
-	address := fmt.Sprintf("%s:%s", p.Host, p.Port)
-
-	logentries := NewLogger(address, p.Ssl, p.Token)
+	logentries := NewLogger(p.Host, p.Ssl, p.Token)
 
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
@@ -59,6 +55,36 @@ func (g *Recv) Execute(args []string) error {
 	return cypress.Glue(generator, receiver)
 }
 
+type Plugin struct {
+	Host  string
+	Ssl   bool
+	Token string
+
+	Key string
+	Log string
+
+	Start      int
+	End        int
+	Filter     string
+	Limit      int
+	BufferSize int
+}
+
+func (p *Plugin) Generator() (cypress.Generator, error) {
+	options := EventsOptions{
+		Start:  p.Start,
+		End:    p.End,
+		Filter: p.Filter,
+		Limit:  p.Limit,
+	}
+
+	return NewLogentriesRecv(p.Key, p.Host, p.Log, &options, p.BufferSize)
+}
+
+func (p *Plugin) Receiver() (cypress.Receiver, error) {
+	return NewLogger(p.Host, p.Ssl, p.Token), nil
+}
+
 func init() {
 	short := "Send messages to Logentries"
 	long := "Given a stream on stdin, the logentries command will read those messages in and send them to Logentries via TCP."
@@ -69,4 +95,12 @@ func init() {
 	long = ""
 
 	commands.Add("logentries:recv", short, long, &Recv{})
+
+	cypress.AddPlugin("logentries", func() cypress.Plugin {
+		return &Plugin{
+			Host:       "data.logentries.com:2000",
+			Limit:      100,
+			BufferSize: 100,
+		}
+	})
 }

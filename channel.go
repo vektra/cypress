@@ -20,3 +20,9 @@ func (c Channel) Receive(m *Message) error {
 	c <- m
 	return nil
 }
+
+// Close the channel down
+func (c Channel) Close() error {
+	close(c)
+	return nil
+}

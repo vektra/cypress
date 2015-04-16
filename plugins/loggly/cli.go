@@ -57,6 +57,40 @@ func (g *Recv) Execute(args []string) error {
 	return cypress.Glue(generator, receiver)
 }
 
+type Plugin struct {
+	Token string
+
+	Account  string
+	Username string
+	Password string
+
+	Q     string
+	From  string
+	Until string
+	Order string
+	Size  uint
+
+	BufferSize int
+}
+
+func (p *Plugin) Generator() (cypress.Generator, error) {
+	rsid := RSIDOptions{
+		Q:     p.Q,
+		From:  p.From,
+		Until: p.Until,
+		Order: p.Order,
+		Size:  p.Size,
+	}
+
+	options := EventsOptions{}
+
+	return NewLogglyRecv(p.Account, p.Username, p.Password, &rsid, &options, p.BufferSize)
+}
+
+func (p *Plugin) Receiver() (cypress.Receiver, error) {
+	return NewLogger(p.Token), nil
+}
+
 func init() {
 	short := "Send messages to Loggly"
 	long := "Given a stream on stdin, the loggly command will read those messages in and send them to Loggly via TCP."
@@ -67,4 +101,11 @@ func init() {
 	long = ""
 
 	commands.Add("loggly:recv", short, long, &Recv{})
+
+	cypress.AddPlugin("loggly", func() cypress.Plugin {
+		return &Plugin{
+			Size:       100,
+			BufferSize: 100,
+		}
+	})
 }

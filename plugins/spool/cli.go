@@ -8,23 +8,20 @@ import (
 	"github.com/vektra/cypress/cli/commands"
 )
 
-type InjectCommand struct {
-	Args struct {
-		Target string `short:"s" positional-arg-name:"target" description:"where to write the messages to"`
-	} `positional-args:"true"`
+type Send struct {
+	Dir string `short:"d" description:"where to write the messages to"`
 }
 
-func (i *InjectCommand) Execute(args []string) error {
-	dir := i.Args.Target
-	if dir == "" {
+func (s *Send) Execute(args []string) error {
+	if s.Dir == "" {
 		return fmt.Errorf("no target specified")
 	}
 
-	if _, err := os.Stat(dir); err != nil {
-		os.MkdirAll(dir, 0755)
+	if _, err := os.Stat(s.Dir); err != nil {
+		os.MkdirAll(s.Dir, 0755)
 	}
 
-	spool, err := NewSpool(dir)
+	spool, err := NewSpool(s.Dir)
 	if err != nil {
 		return err
 	}
@@ -37,6 +34,35 @@ func (i *InjectCommand) Execute(args []string) error {
 	return cypress.Glue(dec, spool)
 }
 
+type Recv struct {
+	Dir string `short:"d" description:"where to write the messages to"`
+}
+
+func (r *Recv) Execute(args []string) error {
+	if r.Dir == "" {
+		return fmt.Errorf("no target specified")
+	}
+
+	if _, err := os.Stat(r.Dir); err != nil {
+		return err
+	}
+
+	spool, err := NewSpool(r.Dir)
+	if err != nil {
+		return err
+	}
+
+	enc := cypress.NewStreamEncoder(os.Stdin)
+
+	gen, err := spool.Generator()
+	if err != nil {
+		return err
+	}
+
+	return cypress.Glue(gen, enc)
+}
+
 func init() {
-	commands.Add("inject", "inject messages to a spool", "", &InjectCommand{})
+	commands.Add("spool:send", "write messages to a spool", "", &Send{})
+	commands.Add("spool:recv", "read messages from a spool", "", &Recv{})
 }

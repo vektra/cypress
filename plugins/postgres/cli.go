@@ -104,16 +104,83 @@ func (g *Recv) Execute(args []string) error {
 		return err
 	}
 
-	dec, err := cypress.NewStreamDecoder(os.Stdin)
+	enc := cypress.NewStreamEncoder(os.Stdin)
+	return cypress.Glue(postgres, enc)
+}
+
+type Plugin struct {
+	DBName      string
+	User        string
+	Password    string
+	Host        string
+	Port        string
+	SSLMode     string
+	Timeout     string
+	SSLCert     string
+	SSLKey      string
+	SSLRootCert string
+
+	Start          string
+	End            string
+	Version        int32
+	Type           uint32
+	SessionId      string
+	AttributeKey   string
+	AttributeValue string
+	TagKey         string
+	TagValue       string
+	Order          string
+	Limit          uint
+
+	BufferSize int
+}
+
+func (p *Plugin) Receiver() (cypress.Receiver, error) {
+	db, err := sql.Open("postgres",
+		fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%s sslmode=%s connect_timeout=%s sslcert=%s sslkey=%s sslrootcert=%s",
+			p.DBName, p.User, p.Password, p.Host, p.Port, p.SSLMode, p.Timeout, p.SSLCert, p.SSLKey, p.SSLRootCert))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return cypress.Glue(dec, postgres)
+	postgres := &Postgres{}
+	postgres.Init(db)
 
-	receiver := cypress.NewStreamEncoder(os.Stdout)
+	err = postgres.SetupDB()
+	if err != nil {
+		return nil, err
+	}
 
-	return cypress.Glue(postgres, receiver)
+	return postgres, nil
+}
+
+func (p *Plugin) Generator() (cypress.Generator, error) {
+	options := &Options{
+		Start:     p.Start,
+		End:       p.End,
+		Version:   p.Version,
+		Type:      p.Type,
+		SessionId: p.SessionId,
+		Order:     p.Order,
+		Limit:     p.Limit,
+	}
+
+	db, err := sql.Open("postgres",
+		fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%s sslmode=%s connect_timeout=%s sslcert=%s sslkey=%s sslrootcert=%s",
+			p.DBName, p.User, p.Password, p.Host, p.Port, p.SSLMode, p.Timeout, p.SSLCert, p.SSLKey, p.SSLRootCert))
+	if err != nil {
+		return nil, err
+	}
+
+	g := &Postgres{}
+	g.Init(db)
+
+	err = g.SetupDB()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewPostgresRecv(g, options, p.BufferSize)
 }
 
 func init() {

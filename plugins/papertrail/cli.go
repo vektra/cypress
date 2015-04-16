@@ -1,7 +1,6 @@
 package papertrail
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/vektra/cypress"
@@ -10,14 +9,11 @@ import (
 
 type Send struct {
 	Host string `short:"H" long:"host" description:"Papertrail host <host>:<port>"`
-	Port string `short:"P" long:"port" description:"Papertrail port <host>:<port>"`
 	Ssl  bool   `short:"S" long:"tls" default:"false" description:"Use TLS"`
 }
 
 func (p *Send) Execute(args []string) error {
-	address := fmt.Sprintf("%s:%s", p.Host, p.Port)
-
-	papertrail := NewLogger(address, p.Ssl)
+	papertrail := NewLogger(p.Host, p.Ssl)
 
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
@@ -59,6 +55,42 @@ func (g *Recv) Execute(args []string) error {
 	return cypress.Glue(generator, receiver)
 }
 
+type Plugin struct {
+	Host string
+	Ssl  bool
+
+	Token    string
+	Q        string
+	GroupId  string
+	SystemId string
+	MinId    string
+	MaxId    string
+	MinTime  string
+	MaxTime  string
+
+	Tail       bool
+	BufferSize int
+}
+
+func (p *Plugin) Receiver() (cypress.Receiver, error) {
+	return NewLogger(p.Host, p.Ssl), nil
+}
+
+func (p *Plugin) Generator() (cypress.Generator, error) {
+	options := EventsOptions{
+		Q:        p.Q,
+		GroupId:  p.GroupId,
+		SystemId: p.SystemId,
+		MinId:    p.MinId,
+		MaxId:    p.MaxId,
+		MinTime:  p.MinTime,
+		MaxTime:  p.MaxTime,
+		Tail:     p.Tail,
+	}
+
+	return NewPapertrailRecv(p.Token, &options, p.BufferSize), nil
+}
+
 func init() {
 	short := "Send messages to Papertrail"
 	long := "Given a stream on stdin, the papertrail command will read those messages in and send them to Papertrail via TCP."
@@ -69,4 +101,8 @@ func init() {
 	long = ""
 
 	commands.Add("papertrail:recv", short, long, &Recv{})
+
+	cypress.AddPlugin("papertrail", func() cypress.Plugin {
+		return &Plugin{BufferSize: 100}
+	})
 }

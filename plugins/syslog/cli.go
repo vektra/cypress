@@ -84,5 +84,5 @@ func (s *CLI) Execute(args []string) error {
 }
 
 func init() {
-	commands.Add("syslog", "Receive syslog messages", "", &CLI{})
+	commands.Add("syslog:recv", "Receive syslog messages", "", &CLI{})
 }

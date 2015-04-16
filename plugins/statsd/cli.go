@@ -28,5 +28,5 @@ func (s *CLI) Execute(args []string) error {
 }
 
 func init() {
-	commands.Add("statsd", "listen on statsd and generate metrics", "", &CLI{})
+	commands.Add("statsd:recv", "listen on statsd and generate metrics", "", &CLI{})
 }
