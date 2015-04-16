@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/vektra/cypress/cli"
-	_ "github.com/vektra/cypress/plugins"
+	_ "github.com/vektra/cypress/plugins/all"
 	_ "github.com/vektra/cypress/tools"
 )
 
