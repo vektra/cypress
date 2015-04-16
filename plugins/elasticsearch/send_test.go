@@ -13,7 +13,7 @@ import (
 	"github.com/vektra/neko"
 )
 
-func TestStore(t *testing.T) {
+func TestSend(t *testing.T) {
 	n := neko.Start(t)
 
 	var conn MockConnection
@@ -21,7 +21,7 @@ func TestStore(t *testing.T) {
 	n.CheckMock(&conn.Mock)
 
 	n.It("store messages in elasticsearch", func() {
-		es := &Store{
+		es := &Send{
 			Host:  "http://localhost:9200",
 			Index: "cypress",
 			conn:  &conn,

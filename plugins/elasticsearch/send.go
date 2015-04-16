@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/vektra/cypress"
-	"github.com/vektra/cypress/cli/commands"
 	"github.com/vektra/errors"
 )
 
@@ -19,7 +18,7 @@ type Connection interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-type Store struct {
+type Send struct {
 	conn     Connection
 	Host     string `short:"H" long:"host" default:"localhost:9200" description:"Address of elasticsearch"`
 	Index    string `short:"i" long:"index" description:"Store all messages in one index rather than date driven indexes"`
@@ -29,7 +28,7 @@ type Store struct {
 	template string
 }
 
-func (s *Store) nextIndex() string {
+func (s *Send) nextIndex() string {
 	if s.Index != "" {
 		return s.Index
 	}
@@ -37,7 +36,7 @@ func (s *Store) nextIndex() string {
 	return s.Prefix + "-" + time.Now().Format("2006.01.02")
 }
 
-func (s *Store) fixupHost() {
+func (s *Send) fixupHost() {
 	if strings.HasPrefix(s.Host, "http://") ||
 		strings.HasPrefix(s.Host, "https://") {
 		return
@@ -50,7 +49,7 @@ func (s *Store) fixupHost() {
 	s.Host = "http://" + s.Host
 }
 
-func (s *Store) connection() Connection {
+func (s *Send) connection() Connection {
 	if s.conn == nil {
 		return http.DefaultClient
 	}
@@ -59,7 +58,7 @@ func (s *Store) connection() Connection {
 }
 
 // Check and write an index template for the indexes used
-func (s *Store) SetupTemplate() error {
+func (s *Send) SetupTemplate() error {
 	req, err := http.NewRequest("GET", s.Host+"/_template/"+s.template, nil)
 	if err != nil {
 		return err
@@ -107,7 +106,7 @@ func (s *Store) SetupTemplate() error {
 var ErrFromElasticsearch = errors.New("elasticsearch reported an error")
 
 // Write a Message to Elasticsearch
-func (s *Store) Receive(m *cypress.Message) error {
+func (s *Send) Receive(m *cypress.Message) error {
 	idx := s.nextIndex()
 	url := s.Host + "/" + idx + "/" + m.StringType()
 
@@ -141,7 +140,7 @@ func (s *Store) Receive(m *cypress.Message) error {
 }
 
 // Check all the options and get ready to run.
-func (s *Store) Init() error {
+func (s *Send) Init() error {
 	if s.Logstash {
 		s.template = "logstash"
 		s.Index = ""
@@ -160,7 +159,7 @@ func (s *Store) Init() error {
 }
 
 // Called when used via the CLI
-func (s *Store) Execute(args []string) error {
+func (s *Send) Execute(args []string) error {
 	dec, err := cypress.NewStreamDecoder(os.Stdin)
 	if err != nil {
 		return err
@@ -175,10 +174,6 @@ func (s *Store) Execute(args []string) error {
 }
 
 // To fit the Generator interface
-func (s *Store) Close() error {
+func (s *Send) Close() error {
 	return nil
-}
-
-func init() {
-	commands.Add("elasticsearch:send", "write messages to elasticsearch", "", &Store{})
 }

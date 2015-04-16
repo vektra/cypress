@@ -10,7 +10,7 @@ type Plugin struct {
 }
 
 func (p *Plugin) Receiver() (cypress.Receiver, error) {
-	s := &Store{
+	s := &Send{
 		Host:     p.Host,
 		Index:    p.Index,
 		Prefix:   p.Prefix,
