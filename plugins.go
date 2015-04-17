@@ -2,6 +2,7 @@ package cypress
 
 import (
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -47,10 +48,26 @@ func FindPlugin(name string) (Plugin, bool) {
 	return t(), true
 }
 
+func AllPlugins() []string {
+	var s []string
+
+	for name, _ := range plugins {
+		s = append(s, name)
+	}
+
+	sort.Strings(s)
+
+	return s
+}
+
 // Used for testing only
 type TestPlugin struct {
 	Messages     chan *Message
 	FilterFields map[string]interface{}
+}
+
+func (t *TestPlugin) Description() string {
+	return "<internal>"
 }
 
 func (t *TestPlugin) Init() {

@@ -3,7 +3,7 @@ package statsd
 import "github.com/vektra/cypress"
 
 type Plugin struct {
-	Listen string
+	Listen string `description:"host:port to listen on for statsd messages"`
 }
 
 func (p *Plugin) Generator() (cypress.Generator, error) {

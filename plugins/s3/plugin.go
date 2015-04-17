@@ -7,12 +7,16 @@ import (
 )
 
 type S3Plugin struct {
-	Dir       string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	ACL       string
-	Region    string
+	Dir       string `description:"directory to store intermediate data in"`
+	AccessKey string `description:"AWS access key"`
+	SecretKey string `description:"AWS secret key"`
+	Bucket    string `description:"S3 bucket + path to store streams in"`
+	ACL       string `description:"S3 ACL of data written (output only)"`
+	Region    string `description:"AWS region to use"`
+}
+
+func (s *S3Plugin) Description() string {
+	return `Write messages to S3 in stream chunks.`
 }
 
 func (s *S3Plugin) Receiver() (cypress.Receiver, error) {

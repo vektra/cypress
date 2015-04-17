@@ -10,13 +10,17 @@ import (
 )
 
 type GeoIP struct {
-	Path   string `short:"p" long:"path" description:"Path to maxmind GeoIP database"`
+	Path   string `short:"p" long:"path" description:"Path to maxmind GeoIP database (default config)"`
 	Field  string `short:"f" long:"field" description:"Field containing an ip to calculate geo information from"`
 	Strict bool   `short:"s" long:"strict" description:"Error out rather than ignore problems calculate the geoip info"`
 
 	All bool `short:"a" long:"all" description:"Include all geo information"`
 
 	r *maxmind.Reader
+}
+
+func (g *GeoIP) Description() string {
+	return `Add fields to the message by calculating the geoip information from an ip stored in an existing field.`
 }
 
 func NewGeoIP() (*GeoIP, error) {

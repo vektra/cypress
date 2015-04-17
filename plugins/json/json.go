@@ -12,6 +12,10 @@ type Filter struct {
 	Keep  bool   `short:"k" long:"keep" description:"keep the string field after expanding"`
 }
 
+func (f *Filter) Description() string {
+	return `Parse a field as json and update the message with the resulting data.`
+}
+
 func (f *Filter) Filter(m *cypress.Message) (*cypress.Message, error) {
 	str, ok := m.GetString(f.Field)
 	if !ok {
@@ -34,6 +38,10 @@ func (f *Filter) Filter(m *cypress.Message) (*cypress.Message, error) {
 	}
 
 	return m, nil
+}
+
+func (f *Filter) Filterer() (cypress.Filterer, error) {
+	return f, nil
 }
 
 func (f *Filter) Execute(args []string) error {

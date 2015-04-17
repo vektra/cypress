@@ -4,8 +4,12 @@ import "github.com/vektra/cypress"
 import "path/filepath"
 
 type Plugin struct {
-	Paths    []string
-	OffsetDB string `toml:"offsetdb"`
+	Paths    []string `toml:"paths" description:"shell list (can contain *) of paths to watch lines for"`
+	OffsetDB string   `toml:"offsetdb" description:"path to use to store file offsets"`
+}
+
+func (p *Plugin) Description() string {
+	return `Generates messages from lines in files. Follows files as they change.`
 }
 
 func (p *Plugin) Generator() (cypress.Generator, error) {

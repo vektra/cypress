@@ -8,11 +8,15 @@ import (
 )
 
 type Plugin struct {
-	Dgram string
-	TCP   string
-	UDP   string
+	Dgram string `description:"unix datagram path to listen on"`
+	TCP   string `description:"tcp host:port to listen on"`
+	UDP   string `description:"udp host:port to listen on"`
 
-	OctetCounted bool
+	OctetCounted bool `toml:"octet_counted" description:"Use octet counted format"`
+}
+
+func (p *Plugin) Description() string {
+	return `Listen for syslog messages.`
 }
 
 func (s *Plugin) Generator() (cypress.Generator, error) {

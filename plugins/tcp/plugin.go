@@ -1,14 +1,13 @@
 package tcp
 
-import (
-	"net"
-
-	"github.com/vektra/cypress"
-)
+import "github.com/vektra/cypress"
 
 type TCPPlugin struct {
-	Address  string
-	Listener net.Listener
+	Address string `description:"host:port to listen (input) or send to (output)"`
+}
+
+func (t *TCPPlugin) Description() string {
+	return `Send or receive message streams over TCP.`
 }
 
 func (r *TCPPlugin) Receiver() (cypress.Receiver, error) {

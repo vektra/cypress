@@ -15,6 +15,10 @@ type Grep struct {
 	regexp *regexp.Regexp
 }
 
+func (g *Grep) Description() string {
+	return `Pass through messages with a field that matches a regexp pattern.`
+}
+
 func (g *Grep) Filter(m *cypress.Message) (*cypress.Message, error) {
 	if g.regexp == nil {
 		reg, err := regexp.Compile(g.Pattern)
@@ -40,6 +44,10 @@ func (g *Grep) Filter(m *cypress.Message) (*cypress.Message, error) {
 	}
 
 	return nil, nil
+}
+
+func (g *Grep) Filterer() (cypress.Filterer, error) {
+	return g, nil
 }
 
 func (g *Grep) Execute(args []string) error {

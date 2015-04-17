@@ -68,48 +68,6 @@ func (m *Metrics) Execute(args []string) error {
 	return cypress.Glue(dec, sink)
 }
 
-type Plugin struct {
-	Listen string
-	Config string
-}
-
-func (p *Plugin) Receiver() (cypress.Receiver, error) {
-	var mc MetricsConfig
-
-	mc.Influx = DefaultInfluxConfig()
-
-	mc.HTTP = p.Listen
-
-	if p.Config != "" {
-		data, err := ioutil.ReadFile(p.Config)
-		if err != nil {
-			return nil, err
-		}
-
-		err = toml.Unmarshal(data, &mc)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	sink := NewMetricSink()
-
-	if p.Listen != "" {
-		log.Printf("Started HTTP server at %s", p.Listen)
-		go sink.RunHTTP(p.Listen)
-	}
-
-	if mc.Influx.URL != "" {
-		err := sink.EnableInflux(mc.Influx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return sink, nil
-}
-
 func init() {
 	commands.Add("metrics", "collect metrics", "", &Metrics{})
-	cypress.AddPlugin("metrics", func() cypress.Plugin { return &Plugin{} })
 }

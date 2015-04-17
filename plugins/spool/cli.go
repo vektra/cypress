@@ -52,7 +52,7 @@ func (r *Recv) Execute(args []string) error {
 		return err
 	}
 
-	enc := cypress.NewStreamEncoder(os.Stdin)
+	enc := cypress.NewStreamEncoder(os.Stdout)
 
 	gen, err := spool.Generator()
 	if err != nil {

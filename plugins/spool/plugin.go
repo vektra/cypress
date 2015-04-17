@@ -3,7 +3,7 @@ package spool
 import "github.com/vektra/cypress"
 
 type SpoolPlugin struct {
-	Directory string
+	Directory string `description:"directory to read/write messages to"`
 }
 
 func (s *SpoolPlugin) Receiver() (cypress.Receiver, error) {
