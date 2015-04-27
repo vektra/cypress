@@ -1,8 +1,6 @@
 package elasticsearch
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	elastigo "github.com/mattbaird/elastigo/lib"
 	"github.com/vektra/cypress"
 	"github.com/vektra/errors"
 )
@@ -26,6 +25,9 @@ type Send struct {
 	Logstash bool   `short:"l" long:"logstash" description:"Store messages like logstash does"`
 
 	template string
+
+	econn *elastigo.Conn
+	bulk  *elastigo.BulkIndexer
 }
 
 func (s *Send) nextIndex() string {
@@ -108,35 +110,23 @@ var ErrFromElasticsearch = errors.New("elasticsearch reported an error")
 // Write a Message to Elasticsearch
 func (s *Send) Receive(m *cypress.Message) error {
 	idx := s.nextIndex()
-	url := s.Host + "/" + idx + "/" + m.StringType()
 
-	data, err := json.Marshal(m)
-	if err != nil {
-		return err
+	if s.econn == nil {
+		s.econn = elastigo.NewConn()
+		s.bulk = s.econn.NewBulkIndexer(10)
 	}
 
-	body := bytes.NewReader(data)
+	t := m.GetTimestamp().Time()
 
-	req, err := http.NewRequest("POST", url, body)
-	if err != nil {
-		return err
+	return s.bulk.Index(idx, m.StringType(), "", "", &t, m, false)
+}
+
+func (s *Send) Close() error {
+	if s.bulk != nil {
+		s.bulk.Flush()
 	}
 
-	conn := s.conn
-	if conn == nil {
-		conn = http.DefaultClient
-	}
-
-	resp, err := conn.Do(req)
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		str, _ := ioutil.ReadAll(resp.Body)
-
-		return errors.Context(ErrFromElasticsearch, string(str))
-	}
-
-	return err
+	return nil
 }
 
 // Check all the options and get ready to run.
@@ -170,10 +160,7 @@ func (s *Send) Execute(args []string) error {
 		return err
 	}
 
-	return cypress.Glue(dec, s)
-}
+	defer s.Close()
 
-// To fit the Generator interface
-func (s *Send) Close() error {
-	return nil
+	return cypress.Glue(dec, s)
 }
