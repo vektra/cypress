@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"testing"
 
@@ -53,7 +52,10 @@ func TestCat(t *testing.T) {
 	})
 
 	n.It("writes out messages in the native format", func() {
-		var out bytes.Buffer
+		var (
+			out bytes.Buffer
+			exp bytes.Buffer
+		)
 
 		m := cypress.Log()
 		m.Add("hello", "world")
@@ -66,14 +68,10 @@ func TestCat(t *testing.T) {
 		err = cat.Run()
 		require.NoError(t, err)
 
-		bytes, err := m.Marshal()
+		err = cypress.NewStreamEncoder(&exp).Receive(m)
 		require.NoError(t, err)
 
-		szbuf := make([]byte, 8)
-
-		binary.BigEndian.PutUint64(szbuf, uint64(len(bytes)))
-
-		assert.Equal(t, string(szbuf)+string(bytes), out.String())
+		assert.Equal(t, exp.String(), out.String())
 	})
 
 	n.Meow()
