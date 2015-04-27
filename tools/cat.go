@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,7 +38,14 @@ var nl = []byte{'\n'}
 func (c *Cat) Run() error {
 	defer c.gen.Close()
 
-	var buf bytes.Buffer
+	var (
+		buf bytes.Buffer
+		enc *cypress.StreamEncoder
+	)
+
+	if c.format == NATIVE {
+		enc = cypress.NewStreamEncoder(c.out)
+	}
 
 	for {
 		m, err := c.gen.Generate()
@@ -64,14 +70,10 @@ func (c *Cat) Run() error {
 		case JSON:
 			json.NewEncoder(c.out).Encode(m)
 		case NATIVE:
-			bytes, err := m.Marshal()
+			err := enc.Receive(m)
 			if err != nil {
 				return err
 			}
-
-			binary.BigEndian.PutUint64(c.buf[:8], uint64(len(bytes)))
-			c.out.Write(c.buf[:8])
-			c.out.Write(bytes)
 		}
 	}
 
