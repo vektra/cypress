@@ -114,6 +114,7 @@ func (s *Send) Receive(m *cypress.Message) error {
 	if s.econn == nil {
 		s.econn = elastigo.NewConn()
 		s.bulk = s.econn.NewBulkIndexer(10)
+		s.bulk.Start()
 	}
 
 	t := m.GetTimestamp().Time()
