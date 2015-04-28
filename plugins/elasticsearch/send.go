@@ -124,7 +124,7 @@ func (s *Send) Receive(m *cypress.Message) error {
 
 func (s *Send) Close() error {
 	if s.bulk != nil {
-		s.bulk.Flush()
+		s.bulk.Stop()
 	}
 
 	return nil
