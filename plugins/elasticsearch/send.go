@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -113,6 +114,12 @@ func (s *Send) Receive(m *cypress.Message) error {
 
 	if s.econn == nil {
 		s.econn = elastigo.NewConn()
+		u, err := url.Parse(s.Host)
+		if err != nil {
+			return err
+		}
+
+		s.econn.SetHosts([]string{u.Host})
 		s.bulk = s.econn.NewBulkIndexer(10)
 		s.bulk.Start()
 	}
@@ -127,7 +134,12 @@ func (s *Send) Close() error {
 		s.bulk.Stop()
 	}
 
-	return nil
+	select {
+	case eb := <-s.bulk.ErrorChannel:
+		return eb.Err
+	default:
+		return nil
+	}
 }
 
 // Check all the options and get ready to run.
