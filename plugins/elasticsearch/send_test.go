@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +24,8 @@ func TestSend(t *testing.T) {
 			url  string
 		)
 
+		c := make(chan bool, 1)
+
 		serv := http.Server{
 			Addr: ":0",
 			Handler: http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -35,6 +36,8 @@ func TestSend(t *testing.T) {
 				req.Body.Close()
 
 				res.WriteHeader(200)
+
+				c <- true
 			}),
 		}
 
@@ -60,7 +63,7 @@ func TestSend(t *testing.T) {
 		err = es.Receive(m)
 		require.NoError(t, err)
 
-		time.Sleep(100 * time.Millisecond)
+		<-c
 
 		err = es.Close()
 		require.NoError(t, err)
