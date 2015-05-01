@@ -80,7 +80,7 @@ var (
 // be sure to consider it's value. The larger the window, the higher
 // the memory usage and throughput. Fast lans only require a small window
 // because there is a very small transmission delay.
-func NewSend(rw io.ReadWriter, window int) *Send {
+func NewSend(rw io.ReadWriteCloser, window int) *Send {
 	switch window {
 	case -1:
 		window = 1
@@ -249,9 +249,18 @@ func (s *Send) Send(m *Message, req SendRequest) error {
 			return ErrClosed
 		}
 
+		s.enc.Flush()
 		s.ackCond.Wait()
 	}
 
 	return nil
 
+}
+
+func (s *Send) Close() error {
+	return s.enc.Close()
+}
+
+func (s *Send) Flush() error {
+	return s.enc.Flush()
 }

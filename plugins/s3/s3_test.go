@@ -1,7 +1,6 @@
 package s3
 
 import (
-	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
@@ -88,6 +87,9 @@ func TestS3(t *testing.T) {
 		err := s3a.Receive(m)
 		require.NoError(t, err)
 
+		err = s3a.Flush()
+		require.NoError(t, err)
+
 		fileData, err := ioutil.ReadFile(s3a.CurrentFile())
 		require.NoError(t, err)
 
@@ -122,6 +124,9 @@ func TestS3(t *testing.T) {
 		require.NoError(t, err)
 
 		err = spool.Receive(m)
+		require.NoError(t, err)
+
+		err = spool.Flush()
 		require.NoError(t, err)
 
 		fileData, err := ioutil.ReadFile(spool.CurrentFile())
@@ -176,6 +181,9 @@ func TestS3(t *testing.T) {
 		m.Add("hello", "world")
 
 		err := s3a.Receive(m)
+		require.NoError(t, err)
+
+		err = s3a.Flush()
 		require.NoError(t, err)
 
 		fileData, err := ioutil.ReadFile(s3a.CurrentFile())
@@ -354,7 +362,7 @@ func TestS3(t *testing.T) {
 
 		name := s3a.LastFile()
 
-		var buf bytes.Buffer
+		var buf cypress.ByteBuffer
 
 		enc := cypress.NewStreamEncoder(&buf)
 
@@ -394,7 +402,7 @@ func TestS3(t *testing.T) {
 
 		name := s3a.LastFile()
 
-		var buf bytes.Buffer
+		var buf cypress.ByteBuffer
 
 		enc := cypress.NewStreamEncoder(&buf)
 

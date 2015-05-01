@@ -1,7 +1,6 @@
 package cypress
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,7 @@ func TestStreamDecoder(t *testing.T) {
 	n := neko.Start(t)
 
 	var (
-		buf bytes.Buffer
+		buf ByteBuffer
 	)
 
 	n.It("can decode a stream created by stream encoder", func() {
@@ -26,6 +25,9 @@ func TestStreamDecoder(t *testing.T) {
 		m.Add("hello", "world")
 
 		err = se.Receive(m)
+		require.NoError(t, err)
+
+		err = se.Close()
 		require.NoError(t, err)
 
 		sd, err := NewStreamDecoder(&buf)

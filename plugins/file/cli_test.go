@@ -1,7 +1,6 @@
 package file
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,7 +25,7 @@ func TestCLI(t *testing.T) {
 	defer tail.Cleanup()
 
 	n.It("generates a stream from lines in a file", func() {
-		var buf bytes.Buffer
+		var buf cypress.ByteBuffer
 
 		file := filepath.Join(tmpdir, "blah.log")
 
@@ -63,7 +62,7 @@ func TestCLI(t *testing.T) {
 	})
 
 	n.It("uses the offsetdb if requested", func() {
-		var buf bytes.Buffer
+		var buf cypress.ByteBuffer
 
 		file := filepath.Join(tmpdir, "blah.log")
 

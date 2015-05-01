@@ -7,6 +7,9 @@ import (
 
 // Read messages from gen and send them to recv
 func Glue(gen Generator, recv Receiver) error {
+	defer recv.Close()
+	defer gen.Close()
+
 	for {
 		m, err := gen.Generate()
 		if err != nil {
@@ -32,6 +35,9 @@ func Glue(gen Generator, recv Receiver) error {
 
 // Read messages from gen and send them to recv
 func GlueFiltered(gen Generator, filt Filterer, recv Receiver) error {
+	defer recv.Close()
+	defer gen.Close()
+
 	for {
 		m, err := gen.Generate()
 		if err != nil {

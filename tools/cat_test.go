@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"encoding/json"
 	"testing"
 
@@ -15,7 +14,7 @@ func TestCat(t *testing.T) {
 	n := neko.Start(t)
 
 	n.It("writes out messages in the KV format", func() {
-		var out bytes.Buffer
+		var out cypress.ByteBuffer
 
 		m := cypress.Log()
 		m.Add("hello", "world")
@@ -32,7 +31,7 @@ func TestCat(t *testing.T) {
 	})
 
 	n.It("writes out messages in the JSON format", func() {
-		var out bytes.Buffer
+		var out cypress.ByteBuffer
 
 		m := cypress.Log()
 		m.Add("hello", "world")
@@ -53,8 +52,8 @@ func TestCat(t *testing.T) {
 
 	n.It("writes out messages in the native format", func() {
 		var (
-			out bytes.Buffer
-			exp bytes.Buffer
+			out cypress.ByteBuffer
+			exp cypress.ByteBuffer
 		)
 
 		m := cypress.Log()

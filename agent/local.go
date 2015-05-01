@@ -30,6 +30,18 @@ func (mr *ManyReceiver) Receive(m *cypress.Message) error {
 	return nil
 }
 
+func (mr *ManyReceiver) Close() error {
+	var err error
+
+	for _, r := range mr.recievers {
+		if e := r.Close(); e != nil {
+			err = e
+		}
+	}
+
+	return err
+}
+
 func ManyReceivers(r ...cypress.Receiver) *ManyReceiver {
 	return &ManyReceiver{r}
 }

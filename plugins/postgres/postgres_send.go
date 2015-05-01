@@ -36,6 +36,7 @@ type DBInterface interface {
 	Ping() error
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	Close() error
 }
 
 type ResultInterface interface {
@@ -86,4 +87,8 @@ func (p *Postgres) Receive(m *cypress.Message) error {
 	}
 
 	return nil
+}
+
+func (p *Postgres) Close() error {
+	return p.DB.Close()
 }

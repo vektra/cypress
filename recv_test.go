@@ -28,6 +28,9 @@ func TestRecv(t *testing.T) {
 		err = s.transmit(m)
 		require.NoError(t, err)
 
+		err = s.Close()
+		require.NoError(t, err)
+
 		m2, err := r.recvMessage()
 		require.NoError(t, err)
 
@@ -67,6 +70,9 @@ func TestRecv(t *testing.T) {
 		m.Add("hello", "world")
 
 		err = s.transmit(m)
+		require.NoError(t, err)
+
+		err = s.Close()
 		require.NoError(t, err)
 
 		m2, err := r.Generate()

@@ -61,6 +61,8 @@ func (t *TCPRecv) handle(c net.Conn) {
 		return
 	}
 
+	defer recv.Close()
+
 	t.Handler.HandleGenerator(recv)
 }
 

@@ -3,6 +3,7 @@ package cypress
 // A core interface, represending a type that can take a Message
 type Receiver interface {
 	Receive(msg *Message) error
+	Close() error
 }
 
 // A core interface, representing a type that can create a Message

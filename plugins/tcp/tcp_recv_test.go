@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,10 +14,14 @@ func TestTCPRecv(t *testing.T) {
 	n := neko.Start(t)
 
 	n.It("sets up generators for each new connection", func() {
-		c := make(chan cypress.Generator)
+		var (
+			m2  *cypress.Message
+			err error
+		)
 
 		r, err := NewTCPRecv(":0", cypress.GeneratorHandlerFunc(func(g cypress.Generator) {
-			c <- g
+			m2, err = g.Generate()
+			require.NoError(t, err)
 		}))
 
 		require.NoError(t, err)
@@ -39,12 +44,10 @@ func TestTCPRecv(t *testing.T) {
 		err = s.Receive(m)
 		require.NoError(t, err)
 
-		defer s.Close()
-
-		gout := <-c
-
-		m2, err := gout.Generate()
+		err = s.Close()
 		require.NoError(t, err)
+
+		time.Sleep(1 * time.Second)
 
 		assert.Equal(t, m, m2)
 
@@ -67,6 +70,8 @@ func TestTCPRecv(t *testing.T) {
 		m := cypress.Log()
 		m.Add("hello", "world")
 
+		time.Sleep(1 * time.Second)
+
 		go func() {
 			s, err := NewTCPSend([]string{addr}, 0, DefaultTCPBuffer)
 			require.NoError(t, err)
@@ -74,7 +79,8 @@ func TestTCPRecv(t *testing.T) {
 			err = s.Receive(m)
 			require.NoError(t, err)
 
-			s.Close()
+			err = s.Close()
+			require.NoError(t, err)
 		}()
 
 		m2, err := gen.Generate()

@@ -33,6 +33,10 @@ func (db *dualBuffer) Write(data []byte) (int, error) {
 	return db.write.Write(data)
 }
 
+func (db *dualBuffer) Close() error {
+	return nil
+}
+
 func (db *dualBuffer) Flip() *dualBuffer {
 	return &dualBuffer{db.write, db.read}
 }

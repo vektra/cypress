@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/tomb.v2"
+
 	"github.com/vektra/cypress"
 )
 
@@ -23,9 +25,12 @@ type TCPSend struct {
 	newMessages chan *cypress.Message
 	closed      chan bool
 
+	flush    chan struct{}
 	shutdown bool
 
 	nacked cypress.Messages
+
+	t tomb.Tomb
 }
 
 const DefaultTCPBuffer = 128
@@ -36,6 +41,7 @@ func NewTCPSend(hosts []string, window, buffer int) (*TCPSend, error) {
 		window:      window,
 		newMessages: make(chan *cypress.Message, buffer),
 		closed:      make(chan bool, 1),
+		flush:       make(chan struct{}),
 	}
 
 	for {
@@ -52,7 +58,7 @@ func NewTCPSend(hosts []string, window, buffer int) (*TCPSend, error) {
 		break
 	}
 
-	go tcp.drain()
+	tcp.t.Go(tcp.drain)
 
 	return tcp, nil
 }
@@ -95,7 +101,15 @@ func (t *TCPSend) Connect() error {
 
 func (t *TCPSend) Close() error {
 	t.shutdown = true
-	return t.c.Close()
+
+	t.t.Kill(nil)
+
+	return t.t.Wait()
+}
+
+func (t *TCPSend) Flush() error {
+	t.flush <- struct{}{}
+	return nil
 }
 
 func (t *TCPSend) Ack(m *cypress.Message) {
@@ -122,7 +136,7 @@ func (t *TCPSend) reconnect() {
 
 	var err error
 
-	t.c.Close()
+	t.s.Close()
 
 	for {
 		err = t.Connect()
@@ -166,16 +180,31 @@ func (t *TCPSend) Receive(m *cypress.Message) error {
 	return nil
 }
 
-func (t *TCPSend) drain() {
+func (t *TCPSend) drain() error {
 	for {
 		select {
 		case <-t.closed:
 			t.reconnect()
+		case <-t.flush:
+			t.s.Flush()
 		case m := <-t.newMessages:
 			t.lock.Lock()
 			t.outstanding++
 			t.lock.Unlock()
 			t.s.Send(m, t)
+		case <-t.t.Dying():
+			for {
+				select {
+				case m := <-t.newMessages:
+					t.lock.Lock()
+					t.outstanding++
+					t.lock.Unlock()
+					t.s.Send(m, t)
+				default:
+					t.s.Close()
+					return nil
+				}
+			}
 		}
 	}
 }
