@@ -156,3 +156,7 @@ func (ms *MetricSink) Receive(m *cypress.Message) error {
 
 	return nil
 }
+
+func (ms *MetricSink) Close() error {
+	return nil
+}

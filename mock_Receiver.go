@@ -13,3 +13,10 @@ func (m *MockReceiver) Receive(msg *Message) error {
 
 	return r0
 }
+func (m *MockReceiver) Close() error {
+	ret := m.Called()
+
+	r0 := ret.Error(0)
+
+	return r0
+}

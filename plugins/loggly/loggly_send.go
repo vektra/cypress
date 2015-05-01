@@ -41,3 +41,7 @@ func (l *Logger) Receive(message *cypress.Message) error {
 
 	return nil
 }
+
+func (l *Logger) Close() error {
+	return nil
+}

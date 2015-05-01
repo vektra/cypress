@@ -1,7 +1,6 @@
 package cypress
 
 import (
-	"bytes"
 	"io/ioutil"
 	"testing"
 
@@ -14,7 +13,7 @@ func TestProbe(t *testing.T) {
 	n := neko.Start(t)
 
 	n.It("can detect if there is a header and read it", func() {
-		var buf bytes.Buffer
+		var buf ByteBuffer
 
 		enc := NewStreamEncoder(&buf)
 
@@ -29,7 +28,7 @@ func TestProbe(t *testing.T) {
 	})
 
 	n.It("sets up a stream to use after the probe with a header", func() {
-		var buf bytes.Buffer
+		var buf ByteBuffer
 
 		enc := NewStreamEncoder(&buf)
 
@@ -44,7 +43,7 @@ func TestProbe(t *testing.T) {
 	})
 
 	n.It("sets up a stream to use after the probe with no header", func() {
-		var buf bytes.Buffer
+		var buf ByteBuffer
 
 		buf.WriteString("{}\n")
 

@@ -33,3 +33,10 @@ func (m *MockDBInterface) Query(query string, args ...interface{}) (*sql.Rows, e
 
 	return r0, r1
 }
+func (m *MockDBInterface) Close() error {
+	ret := m.Called()
+
+	r0 := ret.Error(0)
+
+	return r0
+}

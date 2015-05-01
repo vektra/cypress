@@ -52,6 +52,6 @@ func (p *Probe) Reader() io.Reader {
 
 // Create an io.Writer that will match the parameters of the probed
 // stream.
-func (p *Probe) Writer(w io.Writer) io.Writer {
+func (p *Probe) Writer(w io.WriteCloser) io.WriteCloser {
 	return WriteCompressed(w, p.Compression())
 }

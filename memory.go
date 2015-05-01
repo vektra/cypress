@@ -20,6 +20,10 @@ func (b *BufferReceiver) Receive(m *Message) error {
 	return nil
 }
 
+func (b *BufferReceiver) Close() error {
+	return nil
+}
+
 // Used for testing to syncronize goroutines using the value
 func (b *BufferReceiver) SyncTo() {
 	b.lock.Lock()

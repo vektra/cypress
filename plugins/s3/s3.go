@@ -61,7 +61,6 @@ type S3 struct {
 	client   *s3.S3
 	bucket   *s3.Bucket
 	spool    *spool.Spool
-	enc      *cypress.StreamEncoder
 	lastFile string
 
 	signKey *ecdsa.PrivateKey
@@ -263,6 +262,14 @@ func (s3 *S3) Receive(m *cypress.Message) error {
 	return s3.spool.Receive(m)
 }
 
+func (s3 *S3) Flush() error {
+	return s3.spool.Flush()
+}
+
+func (s3 *S3) Close() error {
+	return s3.spool.Close()
+}
+
 func (s *S3) CurrentFile() string {
 	return s.spool.CurrentFile()
 }
@@ -426,6 +433,7 @@ restart:
 
 		err = signature.ValidateETag(resp)
 		if err != nil {
+			resp.Body.Close()
 			return nil, err
 		}
 

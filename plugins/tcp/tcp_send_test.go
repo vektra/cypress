@@ -44,9 +44,10 @@ func TestTCPSend(t *testing.T) {
 		tcp, err := NewTCPSend([]string{l.Addr().String()}, 0, 0)
 		require.NoError(t, err)
 
-		defer tcp.Close()
-
 		err = tcp.Receive(m)
+		require.NoError(t, err)
+
+		err = tcp.Close()
 		require.NoError(t, err)
 
 		wg.Wait()
@@ -84,9 +85,10 @@ func TestTCPSend(t *testing.T) {
 		tcp, err := NewTCPSend(addrs, 0, 0)
 		require.NoError(t, err)
 
-		defer tcp.Close()
-
 		err = tcp.Receive(m)
+		require.NoError(t, err)
+
+		err = tcp.Close()
 		require.NoError(t, err)
 
 		wg.Wait()
@@ -133,12 +135,13 @@ func TestTCPSend(t *testing.T) {
 		tcp, err := NewTCPSend([]string{l.Addr().String()}, 0, 0)
 		require.NoError(t, err)
 
-		defer tcp.Close()
-
 		err = tcp.Receive(m)
 		require.NoError(t, err)
 
 		err = tcp.Receive(m)
+		require.NoError(t, err)
+
+		err = tcp.Flush()
 		require.NoError(t, err)
 
 		runtime.Gosched()
@@ -217,13 +220,24 @@ func TestTCPSend(t *testing.T) {
 		err = tcp.Receive(m)
 		require.NoError(t, err)
 
+		err = tcp.Flush()
+		require.NoError(t, err)
+
 		m2 := cypress.Log()
-		m2.Add("hello", "world")
+		m2.Add("hello", "everyone")
 
 		err = tcp.Receive(m2)
 		require.NoError(t, err)
 
+		err = tcp.Flush()
+		require.NoError(t, err)
+
 		latch <- true
+
+		time.Sleep(100 * time.Millisecond)
+
+		err = tcp.Flush()
+		require.NoError(t, err)
 
 		select {
 		case <-time.Tick(100 * time.Millisecond):
@@ -290,8 +304,6 @@ func TestTCPSend(t *testing.T) {
 		tcp, err := NewTCPSend([]string{addr}, 0, 0)
 		require.NoError(t, err)
 
-		defer tcp.Close()
-
 		var sent []*cypress.Message
 
 		for i := 0; i < 100; i++ {
@@ -305,6 +317,9 @@ func TestTCPSend(t *testing.T) {
 			err = tcp.Receive(m)
 			require.NoError(t, err)
 		}
+
+		err = tcp.Close()
+		require.NoError(t, err)
 
 		wg.Wait()
 
@@ -384,8 +399,6 @@ func TestTCPSend(t *testing.T) {
 		tcp, err := NewTCPSend([]string{addr}, 0, 0)
 		require.NoError(t, err)
 
-		defer tcp.Close()
-
 		var sent []*cypress.Message
 
 		for i := 0; i < 100; i++ {
@@ -399,6 +412,9 @@ func TestTCPSend(t *testing.T) {
 			err = tcp.Receive(m)
 			require.NoError(t, err)
 		}
+
+		err = tcp.Close()
+		require.NoError(t, err)
 
 		wg.Wait()
 

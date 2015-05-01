@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +20,7 @@ const (
 )
 
 type Cat struct {
-	out io.Writer
+	out io.WriteCloser
 	gen cypress.Generator
 
 	format Format
@@ -29,7 +28,7 @@ type Cat struct {
 	buf []byte
 }
 
-func NewCat(out io.Writer, gen cypress.Generator, format Format) (*Cat, error) {
+func NewCat(out io.WriteCloser, gen cypress.Generator, format Format) (*Cat, error) {
 	return &Cat{out, gen, format, make([]byte, 128)}, nil
 }
 
@@ -39,7 +38,7 @@ func (c *Cat) Run() error {
 	defer c.gen.Close()
 
 	var (
-		buf bytes.Buffer
+		buf cypress.ByteBuffer
 		enc *cypress.StreamEncoder
 	)
 
@@ -61,7 +60,7 @@ func (c *Cat) Run() error {
 		case KV:
 			buf.Reset()
 
-			m.KVStringInto(&buf)
+			m.KVStringInto(&buf.Buffer)
 			c.out.Write(buf.Bytes())
 			c.out.Write(nl)
 		case HUMAN:

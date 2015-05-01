@@ -16,7 +16,7 @@ type CLI struct {
 
 	Debug bool `long:"debug" description:"Output debug information to stderr"`
 
-	output io.Writer
+	output io.WriteCloser
 }
 
 var dbgLog = log.New(os.Stderr, "cypress-file: ", log.LstdFlags)

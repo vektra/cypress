@@ -97,6 +97,9 @@ func TestSpool(t *testing.T) {
 		err = sf.Receive(cm)
 		require.NoError(t, err)
 
+		err = sf.Flush()
+		require.NoError(t, err)
+
 		s, err := NewSpool(tmpdir)
 		require.NoError(t, err)
 

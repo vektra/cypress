@@ -38,6 +38,10 @@ func (r *RedisOutput) process() {
 	for {
 		data := <-r.feeder
 
+		if data == nil {
+			return
+		}
+
 	retry:
 		_, err := r.conn.Do("lpush", r.listName, data)
 
@@ -68,6 +72,11 @@ func (r *RedisOutput) Receive(m *cypress.Message) error {
 
 	r.feeder <- data
 
+	return nil
+}
+
+func (r *RedisOutput) Close() error {
+	close(r.feeder)
 	return nil
 }
 

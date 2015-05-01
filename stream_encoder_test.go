@@ -16,12 +16,12 @@ func TestStreamEncoder(t *testing.T) {
 	n := neko.Start(t)
 
 	var (
-		buf *bytes.Buffer
+		buf *ByteBuffer
 		se  *StreamEncoder
 	)
 
 	n.Setup(func() {
-		buf = new(bytes.Buffer)
+		buf = new(ByteBuffer)
 		se = NewStreamEncoder(buf)
 	})
 
@@ -60,7 +60,7 @@ func TestStreamEncoder(t *testing.T) {
 		assert.Equal(t, m, m2)
 	})
 
-	n.It("encodes a message to the output matching the stream's params", func() {
+	n.Only("encodes a message to the output matching the stream's params", func() {
 		err := se.Init(SNAPPY)
 		require.NoError(t, err)
 
@@ -68,6 +68,9 @@ func TestStreamEncoder(t *testing.T) {
 		m.Add("hello", "world")
 
 		err = se.Receive(m)
+		require.NoError(t, err)
+
+		err = se.Close()
 		require.NoError(t, err)
 
 		input := bytes.NewReader(buf.Bytes())

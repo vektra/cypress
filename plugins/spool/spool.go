@@ -166,11 +166,17 @@ func (sf *Spool) Receive(m *cypress.Message) error {
 	return nil
 }
 
+func (sf *Spool) Flush() error {
+	return sf.enc.Flush()
+}
+
 func (sf *Spool) Close() error {
+	sf.enc.Flush()
 	return sf.file.Close()
 }
 
 func (sf *Spool) Rotate() error {
+	sf.enc.Flush()
 	sf.file.Close()
 
 	newName := sf.newFilename()
