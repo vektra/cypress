@@ -108,7 +108,7 @@ func NewSend(rw io.ReadWriteCloser, window int) *Send {
 // the stream to use Snappy for compression and reliable transmission.
 func (s *Send) SendHandshake() error {
 	hdr := &StreamHeader{
-		Compression: SNAPPY.Enum(),
+		Compression: NONE.Enum(),
 		Mode:        StreamHeader_RELIABLE.Enum(),
 	}
 

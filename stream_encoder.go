@@ -137,8 +137,10 @@ func (s *StreamEncoder) Receive(m *Message) error {
 }
 
 func (s *StreamEncoder) Close() error {
-	s.t.Kill(nil)
-	s.t.Wait()
+	if s.flush != nil {
+		s.t.Kill(nil)
+		s.t.Wait()
+	}
 	return s.ew.Close()
 }
 
