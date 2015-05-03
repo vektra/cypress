@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"log"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"sync"
 	"syscall"
 )
@@ -36,6 +38,8 @@ func (l *LifecycleData) RunCleanup() {
 		return
 	}
 
+	pprof.StopCPUProfile()
+
 	l.ranShutdown = true
 
 	for _, h := range l.onShutdown {
@@ -44,6 +48,16 @@ func (l *LifecycleData) RunCleanup() {
 }
 
 func (l *LifecycleData) Start() {
+	path := os.Getenv("PROFILE")
+	if path != "" {
+		f, err := os.Create(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		pprof.StartCPUProfile(f)
+	}
+
 	c := make(chan os.Signal)
 
 	signal.Notify(c, os.Interrupt)
