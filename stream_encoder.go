@@ -30,7 +30,8 @@ type StreamEncoder struct {
 	t tomb.Tomb
 }
 
-// Create a new StreamEncoder sending data to w
+// Create a new StreamEncoder sending data to w. The format is either the
+// native format or kv format if w is stdout and a tty.
 func NewStreamEncoder(w io.WriteCloser) *StreamEncoder {
 	if w == os.Stdout {
 		if termutil.Isatty(os.Stdout.Fd()) {
