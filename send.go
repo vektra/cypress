@@ -1,7 +1,6 @@
 package cypress
 
 import (
-	"bufio"
 	"container/list"
 	"errors"
 	"io"
@@ -18,8 +17,6 @@ type Send struct {
 	rw  io.ReadWriter
 	enc *StreamEncoder
 	buf []byte
-
-	ackRead *bufio.Reader
 
 	closed    bool
 	window    int
@@ -95,7 +92,6 @@ func NewSend(rw io.ReadWriteCloser, window int) *Send {
 		rw:        rw,
 		enc:       NewStreamEncoder(rw),
 		buf:       make([]byte, window),
-		ackRead:   bufio.NewReader(rw),
 		window:    window,
 		available: int32(window),
 		reqs:      list.New(),
@@ -144,7 +140,7 @@ type sendInFlight struct {
 
 // Read any acks from the stream and remove them from the requests list.
 func (s *Send) readAck() error {
-	n, err := s.ackRead.Read(s.buf)
+	n, err := s.rw.Read(s.buf)
 	if err != nil {
 		return err
 	}
