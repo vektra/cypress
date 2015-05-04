@@ -101,6 +101,9 @@ func TestRecv(t *testing.T) {
 		err = s.Receive(m)
 		require.NoError(t, err)
 
+		err = s.Flush()
+		require.NoError(t, err)
+
 		m2, err := r.Generate()
 		require.NoError(t, err)
 

@@ -1,6 +1,7 @@
 package cypress
 
 import (
+	"bufio"
 	"bytes"
 	"compress/zlib"
 	"io"
@@ -60,11 +61,19 @@ func (s *snappyWriter) Close() error {
 	return s.Flush()
 }
 
+type bufWriter struct {
+	*bufio.Writer
+}
+
+func (b *bufWriter) Close() error {
+	return b.Flush()
+}
+
 // Given a compression level, return a wrapped Writer
 func WriteCompressed(w io.WriteCloser, comp StreamHeader_Compression) io.WriteCloser {
 	switch comp {
 	case StreamHeader_NONE:
-		return w
+		return &bufWriter{bufio.NewWriter(w)}
 	case StreamHeader_SNAPPY:
 		return &snappyWriter{
 			Writer:      snappy.NewWriter(w),
