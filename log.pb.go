@@ -307,6 +307,7 @@ func init() {
 	proto.RegisterEnum("cypress.StreamHeader_Mode", StreamHeader_Mode_name, StreamHeader_Mode_value)
 }
 func (m *Interval) Unmarshal(data []byte) error {
+	var hasFields [1]uint64
 	l := len(data)
 	index := 0
 	for index < l {
@@ -340,6 +341,7 @@ func (m *Interval) Unmarshal(data []byte) error {
 					break
 				}
 			}
+			hasFields[0] |= uint64(0x00000001)
 		case 2:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Nanoseconds", wireType)
@@ -355,6 +357,7 @@ func (m *Interval) Unmarshal(data []byte) error {
 					break
 				}
 			}
+			hasFields[0] |= uint64(0x00000002)
 		default:
 			var sizeOfWire int
 			for {
@@ -365,7 +368,7 @@ func (m *Interval) Unmarshal(data []byte) error {
 				}
 			}
 			index -= sizeOfWire
-			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			skippy, err := skipLog(data[index:])
 			if err != nil {
 				return err
 			}
@@ -376,9 +379,17 @@ func (m *Interval) Unmarshal(data []byte) error {
 			index += skippy
 		}
 	}
+	if hasFields[0]&uint64(0x00000001) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("seconds")
+	}
+	if hasFields[0]&uint64(0x00000002) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("nanoseconds")
+	}
+
 	return nil
 }
 func (m *Attribute) Unmarshal(data []byte) error {
+	var hasFields [1]uint64
 	l := len(data)
 	index := 0
 	for index < l {
@@ -412,6 +423,7 @@ func (m *Attribute) Unmarshal(data []byte) error {
 					break
 				}
 			}
+			hasFields[0] |= uint64(0x00000001)
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Skey", wireType)
@@ -549,19 +561,18 @@ func (m *Attribute) Unmarshal(data []byte) error {
 				return fmt.Errorf("proto: wrong wireType = %d for field Fval", wireType)
 			}
 			var v uint64
-			i := index + 8
-			if i > l {
+			if (index + 8) > l {
 				return io.ErrUnexpectedEOF
 			}
-			index = i
-			v = uint64(data[i-8])
-			v |= uint64(data[i-7]) << 8
-			v |= uint64(data[i-6]) << 16
-			v |= uint64(data[i-5]) << 24
-			v |= uint64(data[i-4]) << 32
-			v |= uint64(data[i-3]) << 40
-			v |= uint64(data[i-2]) << 48
-			v |= uint64(data[i-1]) << 56
+			index += 8
+			v = uint64(data[index-8])
+			v |= uint64(data[index-7]) << 8
+			v |= uint64(data[index-6]) << 16
+			v |= uint64(data[index-5]) << 24
+			v |= uint64(data[index-4]) << 32
+			v |= uint64(data[index-3]) << 40
+			v |= uint64(data[index-2]) << 48
+			v |= uint64(data[index-1]) << 56
 			v2 := math.Float64frombits(v)
 			m.Fval = &v2
 		default:
@@ -574,7 +585,7 @@ func (m *Attribute) Unmarshal(data []byte) error {
 				}
 			}
 			index -= sizeOfWire
-			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			skippy, err := skipLog(data[index:])
 			if err != nil {
 				return err
 			}
@@ -585,9 +596,14 @@ func (m *Attribute) Unmarshal(data []byte) error {
 			index += skippy
 		}
 	}
+	if hasFields[0]&uint64(0x00000001) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("key")
+	}
+
 	return nil
 }
 func (m *Tag) Unmarshal(data []byte) error {
+	var hasFields [1]uint64
 	l := len(data)
 	index := 0
 	for index < l {
@@ -628,6 +644,7 @@ func (m *Tag) Unmarshal(data []byte) error {
 			}
 			m.Name = string(data[index:postIndex])
 			index = postIndex
+			hasFields[0] |= uint64(0x00000001)
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
@@ -661,7 +678,7 @@ func (m *Tag) Unmarshal(data []byte) error {
 				}
 			}
 			index -= sizeOfWire
-			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			skippy, err := skipLog(data[index:])
 			if err != nil {
 				return err
 			}
@@ -672,9 +689,14 @@ func (m *Tag) Unmarshal(data []byte) error {
 			index += skippy
 		}
 	}
+	if hasFields[0]&uint64(0x00000001) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("name")
+	}
+
 	return nil
 }
 func (m *Message) Unmarshal(data []byte) error {
+	var hasFields [1]uint64
 	l := len(data)
 	index := 0
 	for index < l {
@@ -735,6 +757,7 @@ func (m *Message) Unmarshal(data []byte) error {
 				return err
 			}
 			index = postIndex
+			hasFields[0] |= uint64(0x00000001)
 		case 2:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
@@ -752,6 +775,7 @@ func (m *Message) Unmarshal(data []byte) error {
 				}
 			}
 			m.Type = &v
+			hasFields[0] |= uint64(0x00000002)
 		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Attributes", wireType)
@@ -773,7 +797,9 @@ func (m *Message) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Attributes = append(m.Attributes, &Attribute{})
-			m.Attributes[len(m.Attributes)-1].Unmarshal(data[index:postIndex])
+			if err := m.Attributes[len(m.Attributes)-1].Unmarshal(data[index:postIndex]); err != nil {
+				return err
+			}
 			index = postIndex
 		case 4:
 			if wireType != 2 {
@@ -819,7 +845,9 @@ func (m *Message) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Tags = append(m.Tags, &Tag{})
-			m.Tags[len(m.Tags)-1].Unmarshal(data[index:postIndex])
+			if err := m.Tags[len(m.Tags)-1].Unmarshal(data[index:postIndex]); err != nil {
+				return err
+			}
 			index = postIndex
 		default:
 			var sizeOfWire int
@@ -831,7 +859,7 @@ func (m *Message) Unmarshal(data []byte) error {
 				}
 			}
 			index -= sizeOfWire
-			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			skippy, err := skipLog(data[index:])
 			if err != nil {
 				return err
 			}
@@ -842,6 +870,13 @@ func (m *Message) Unmarshal(data []byte) error {
 			index += skippy
 		}
 	}
+	if hasFields[0]&uint64(0x00000001) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("timestamp")
+	}
+	if hasFields[0]&uint64(0x00000002) == 0 {
+		return github_com_gogo_protobuf_proto.NewRequiredNotSetError("type")
+	}
+
 	return nil
 }
 func (m *StreamHeader) Unmarshal(data []byte) error {
@@ -907,7 +942,7 @@ func (m *StreamHeader) Unmarshal(data []byte) error {
 				}
 			}
 			index -= sizeOfWire
-			skippy, err := github_com_gogo_protobuf_proto.Skip(data[index:])
+			skippy, err := skipLog(data[index:])
 			if err != nil {
 				return err
 			}
@@ -918,7 +953,92 @@ func (m *StreamHeader) Unmarshal(data []byte) error {
 			index += skippy
 		}
 	}
+
 	return nil
+}
+func skipLog(data []byte) (n int, err error) {
+	l := len(data)
+	index := 0
+	for index < l {
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if index >= l {
+				return 0, io.ErrUnexpectedEOF
+			}
+			b := data[index]
+			index++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		wireType := int(wire & 0x7)
+		switch wireType {
+		case 0:
+			for {
+				if index >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				index++
+				if data[index-1] < 0x80 {
+					break
+				}
+			}
+			return index, nil
+		case 1:
+			index += 8
+			return index, nil
+		case 2:
+			var length int
+			for shift := uint(0); ; shift += 7 {
+				if index >= l {
+					return 0, io.ErrUnexpectedEOF
+				}
+				b := data[index]
+				index++
+				length |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			index += length
+			return index, nil
+		case 3:
+			for {
+				var wire uint64
+				var start int = index
+				for shift := uint(0); ; shift += 7 {
+					if index >= l {
+						return 0, io.ErrUnexpectedEOF
+					}
+					b := data[index]
+					index++
+					wire |= (uint64(b) & 0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				wireType := int(wire & 0x7)
+				if wireType == 4 {
+					break
+				}
+				next, err := skipLog(data[start:])
+				if err != nil {
+					return 0, err
+				}
+				index = start + next
+			}
+			return index, nil
+		case 4:
+			return index, nil
+		case 5:
+			index += 4
+			return index, nil
+		default:
+			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
+		}
+	}
+	panic("unreachable")
 }
 func (m *Interval) Size() (n int) {
 	var l int
@@ -1187,10 +1307,9 @@ func (m *Message) MarshalTo(data []byte) (n int, err error) {
 	_ = i
 	var l int
 	_ = l
-	data[i] = 0x30
-	i++
-	i = encodeVarintLog(data, i, uint64(m.Version))
-	if m.Timestamp != nil {
+	if m.Timestamp == nil {
+		return 0, github_com_gogo_protobuf_proto.NewRequiredNotSetError("timestamp")
+	} else {
 		data[i] = 0xa
 		i++
 		i = encodeVarintLog(data, i, uint64(m.Timestamp.Size()))
@@ -1200,7 +1319,9 @@ func (m *Message) MarshalTo(data []byte) (n int, err error) {
 		}
 		i += n2
 	}
-	if m.Type != nil {
+	if m.Type == nil {
+		return 0, github_com_gogo_protobuf_proto.NewRequiredNotSetError("type")
+	} else {
 		data[i] = 0x10
 		i++
 		i = encodeVarintLog(data, i, uint64(*m.Type))
@@ -1235,6 +1356,9 @@ func (m *Message) MarshalTo(data []byte) (n int, err error) {
 			i += n
 		}
 	}
+	data[i] = 0x30
+	i++
+	i = encodeVarintLog(data, i, uint64(m.Version))
 	if m.XXX_unrecognized != nil {
 		i += copy(data[i:], m.XXX_unrecognized)
 	}
@@ -1613,9 +1737,6 @@ func (this *Message) VerboseEqual(that interface{}) error {
 	} else if this == nil {
 		return fmt.Errorf("that is type *Messagebut is not nil && this == nil")
 	}
-	if this.Version != that1.Version {
-		return fmt.Errorf("Version this(%v) Not Equal that(%v)", this.Version, that1.Version)
-	}
 	if !this.Timestamp.Equal(that1.Timestamp) {
 		return fmt.Errorf("Timestamp this(%v) Not Equal that(%v)", this.Timestamp, that1.Timestamp)
 	}
@@ -1653,6 +1774,9 @@ func (this *Message) VerboseEqual(that interface{}) error {
 			return fmt.Errorf("Tags this[%v](%v) Not Equal that[%v](%v)", i, this.Tags[i], i, that1.Tags[i])
 		}
 	}
+	if this.Version != that1.Version {
+		return fmt.Errorf("Version this(%v) Not Equal that(%v)", this.Version, that1.Version)
+	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
 	}
@@ -1676,9 +1800,6 @@ func (this *Message) Equal(that interface{}) bool {
 		}
 		return false
 	} else if this == nil {
-		return false
-	}
-	if this.Version != that1.Version {
 		return false
 	}
 	if !this.Timestamp.Equal(that1.Timestamp) {
@@ -1717,6 +1838,9 @@ func (this *Message) Equal(that interface{}) bool {
 		if !this.Tags[i].Equal(that1.Tags[i]) {
 			return false
 		}
+	}
+	if this.Version != that1.Version {
+		return false
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return false
