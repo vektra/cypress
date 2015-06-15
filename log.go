@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/gogo/protobuf/proto"
 	"github.com/mgutz/ansi"
 	"github.com/vektra/errors"
@@ -230,6 +229,46 @@ func (m *Message) KVPairsInto(buf *bytes.Buffer) {
 	}
 }
 
+// Write a Message's attributes in KV format to a buffer
+func (attr *Attribute) KVStringInto(m *Message, buf *bytes.Buffer) {
+	buf.WriteString(attr.StringKey(m))
+	buf.WriteString("=")
+
+	switch {
+	case attr.Ival != nil:
+		buf.WriteString(strconv.FormatInt(*attr.Ival, 10))
+	case attr.Fval != nil:
+		buf.WriteString(strconv.FormatFloat(*attr.Fval, 'g', -1, 64))
+	case attr.Boolval != nil:
+		if *attr.Boolval {
+			buf.WriteString("true")
+		} else {
+			buf.WriteString("false")
+		}
+	case attr.Sval != nil:
+		buf.WriteString("\"")
+		buf.WriteString(strquote(*attr.Sval))
+		buf.WriteString("\"")
+	case attr.Bval != nil:
+		buf.WriteString("\"")
+		buf.WriteString(strquote(string(attr.Bval)))
+		buf.WriteString("\"")
+	case attr.Tval != nil:
+		buf.WriteString(":")
+		buf.WriteString(strconv.FormatInt(int64(attr.Tval.GetSeconds()), 10))
+		buf.WriteString(".")
+		buf.WriteString(subsecond(attr.Tval.GetNanoseconds()))
+	}
+}
+
+func (attr *Attribute) KVString(m *Message) string {
+	var buf bytes.Buffer
+
+	attr.KVStringInto(m, &buf)
+
+	return buf.String()
+}
+
 // Return the Message as a KV formatted string
 func (m *Message) KVString() string {
 	var buf bytes.Buffer
@@ -326,7 +365,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 				buf.WriteString(" ")
 
 				if s := m.GetSessionId(); len(s) > 0 {
-					buf.WriteString(uuid.UUID(s).String()[0:7])
+					buf.WriteString(s[0:7])
 				} else {
 					buf.WriteString("0000000")
 				}
@@ -360,7 +399,7 @@ func (m *Message) SyslogString(colorize bool, align bool) string {
 	buf.WriteString(" ")
 
 	if s := m.GetSessionId(); len(s) > 0 {
-		buf.WriteString(uuid.UUID(s).String()[0:7])
+		buf.WriteString(s[0:7])
 	} else {
 		buf.WriteString("0000000")
 	}

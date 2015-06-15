@@ -123,7 +123,10 @@ func ParseSimpleJSON(data []byte) (*Message, error) {
 
 							m.AddBytes(key, bytes)
 						} else {
-							return nil, ErrInvalidMessage
+							err = m.Add(key, val)
+							if err != nil {
+								return nil, err
+							}
 						}
 					}
 				} else {
