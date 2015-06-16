@@ -473,29 +473,7 @@ func (a *Attribute) StringKey(m *Message) string {
 func (m *Message) Get(key string) (interface{}, bool) {
 	for _, attr := range m.Attributes {
 		if attr.StringKey(m) == key {
-			if attr.Ival != nil {
-				return *attr.Ival, true
-			}
-
-			if attr.Fval != nil {
-				return *attr.Fval, true
-			}
-
-			if attr.Sval != nil {
-				return *attr.Sval, true
-			}
-
-			if attr.Bval != nil {
-				return attr.Bval, true
-			}
-
-			if attr.Tval != nil {
-				return attr.Tval, true
-			}
-
-			if attr.Boolval != nil {
-				return *attr.Boolval, true
-			}
+			return attr.Value(), true
 		}
 	}
 
@@ -818,6 +796,34 @@ func (m *Message) AddMany(vals ...interface{}) error {
 		}
 
 		m.Add(key, vals[i+1])
+	}
+
+	return nil
+}
+
+func (attr *Attribute) Value() interface{} {
+	if attr.Ival != nil {
+		return *attr.Ival
+	}
+
+	if attr.Fval != nil {
+		return *attr.Fval
+	}
+
+	if attr.Sval != nil {
+		return *attr.Sval
+	}
+
+	if attr.Bval != nil {
+		return attr.Bval
+	}
+
+	if attr.Tval != nil {
+		return attr.Tval
+	}
+
+	if attr.Boolval != nil {
+		return *attr.Boolval
 	}
 
 	return nil
