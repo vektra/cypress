@@ -6,7 +6,7 @@ import (
 	"compress/zlib"
 	"io"
 
-	"github.com/golang/snappy/snappy"
+	"github.com/golang/snappy"
 )
 
 // No compression is applied
