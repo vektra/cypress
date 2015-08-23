@@ -146,21 +146,21 @@ func TestTCPSend(t *testing.T) {
 
 		runtime.Gosched()
 
-		assert.Equal(t, 2, tcp.outstanding)
+		assert.Equal(t, 2, tcp.Outstanding())
 
 		latch <- true
 		<-latch
 
 		time.Sleep(100 * time.Millisecond)
 
-		assert.Equal(t, 1, tcp.outstanding)
+		assert.Equal(t, 1, tcp.Outstanding())
 
 		latch <- true
 		wg.Wait()
 
 		time.Sleep(100 * time.Millisecond)
 
-		assert.Equal(t, 1, tcp.outstanding)
+		assert.Equal(t, 1, tcp.Outstanding())
 	})
 
 	n.It("send nack'd messages once reconnected", func() {
