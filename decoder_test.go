@@ -69,5 +69,21 @@ func TestDecoder(t *testing.T) {
 		assert.Equal(t, m, m2)
 	})
 
+	n.It("can decode unformatted text", func() {
+		str := "this is some text that isn't formatted"
+		buf.WriteString(str)
+		buf.WriteByte('\n')
+
+		m2, err := dec.Decode()
+		require.NoError(t, err)
+
+		t.Log(m2.KVString())
+
+		out, ok := m2.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, str, out)
+	})
+
 	n.Meow()
 }

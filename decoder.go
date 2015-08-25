@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"strings"
 )
 
 type typeDecoder func(d *Decoder) (*Message, error)
@@ -49,7 +50,7 @@ func (d *Decoder) probe() error {
 		d.js = json.NewDecoder(d.r)
 		d.decoder = decodeJSON
 	default:
-		return ErrUnknownStreamType
+		d.decoder = decodeBare
 	}
 
 	return nil
@@ -125,6 +126,19 @@ func decodeJSON(d *Decoder) (*Message, error) {
 	}
 
 	m.Version = DEFAULT_VERSION
+
+	return m, nil
+}
+
+func decodeBare(d *Decoder) (*Message, error) {
+	m := Log()
+
+	line, err := d.r.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	m.Add("message", strings.TrimRight(line, " \t\n"))
 
 	return m, nil
 }
