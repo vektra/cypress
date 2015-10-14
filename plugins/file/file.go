@@ -211,6 +211,10 @@ func (f *File) Generate() (*cypress.Message, error) {
 	return m, nil
 }
 
+func (f *File) Lines() chan Line {
+	return f.lines
+}
+
 func (f *File) GenerateLine() (*Line, error) {
 	line, ok := <-f.lines
 	if !ok {
