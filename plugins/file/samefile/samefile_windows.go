@@ -1,3 +1,5 @@
+package samefile
+
 // +build windows
 import (
 	"encoding/binary"
@@ -12,15 +14,15 @@ func fsHash(path string, h io.Writer) error {
 		return err
 	}
 
-	h, err := syscall.CreateFile(pathp, 0, 0, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_BACKUP_SEMANTICS, 0)
+	handle, err := syscall.CreateFile(pathp, 0, 0, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_BACKUP_SEMANTICS, 0)
 	if err != nil {
 		return err
 	}
 
-	defer syscall.CloseHandle(h)
+	defer syscall.CloseHandle(handle)
 	var i syscall.ByHandleFileInformation
 
-	err = syscall.GetFileInformationByHandle(syscall.Handle(h), &i)
+	err = syscall.GetFileInformationByHandle(syscall.Handle(handle), &i)
 	if err != nil {
 		return err
 	}
