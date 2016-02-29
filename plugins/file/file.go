@@ -131,6 +131,8 @@ func (f *File) readFollow() error {
 
 	offset := f.offset
 
+	var prefix string
+
 top:
 	for {
 		str, err := buf.ReadString('\n')
@@ -138,6 +140,8 @@ top:
 			if err != io.EOF {
 				return err
 			}
+
+			prefix = str
 
 			for {
 				select {
@@ -167,6 +171,11 @@ top:
 				case <-f.t.Dying():
 					return nil
 				}
+			}
+		} else {
+			if prefix != "" {
+				str = prefix + str
+				prefix = ""
 			}
 		}
 

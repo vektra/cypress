@@ -89,6 +89,31 @@ func TestFile(t *testing.T) {
 		assert.Equal(t, "line 2 comes later", msg2)
 	})
 
+	n.It("deals with a read event not generating a full line", func() {
+		path := filepath.Join(tmpdir, "blah.log")
+
+		f, err := os.Create(path)
+		require.NoError(t, err)
+
+		defer f.Close()
+		defer os.Remove(path)
+
+		fo, err := NewFollowFile(path, 0)
+		require.NoError(t, err)
+
+		fmt.Fprint(f, "line 1 has")
+		time.Sleep(1 * time.Second)
+		fmt.Fprint(f, " stuff\n")
+
+		m1, err := fo.Generate()
+		require.NoError(t, err)
+
+		msg1, ok := m1.GetString("message")
+		require.True(t, ok)
+
+		assert.Equal(t, "line 1 has stuff", msg1)
+	})
+
 	n.It("reopens a file that is deleted", func() {
 		path := filepath.Join(tmpdir, "blah.log")
 
